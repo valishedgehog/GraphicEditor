@@ -5,41 +5,36 @@ unit figures;
 interface
 
 uses
-  Classes, SysUtils, Graphics;
+  Classes, SysUtils, Graphics, transform, parameters;
 
 type
 
-  TFigureClass = class of TFigureBase;
-
-
   TFigureBase = class
-    Points: array of TPoint;
-    PenColor: TColor;
-    PenWidth: Integer;
-    BrushColor: TColor;
-    FigureClass: TFigureClass;
-    constructor Create(FPoint: TPoint; PColor: TColor; BColor: TColor; PWidth: Integer);
+    DPoints: TDPointsArray;
+    Points: TPointsArray;
+    PenStyle: TPenStyle;
+    BrushStyle: TBrushStyle;
+    PenColor, BrushColor: TColor;
+    PenWidth, Rounding: integer;
+    constructor Create(FPoint: TDPoint);
     procedure Draw(ACanvas: TCanvas); virtual;
-    procedure AddPoint(APoint: TPoint); virtual;
+    function FindTopLeft: TDPoint;
+    function FindBottomRight: TDPoint;
   end;
 
-  TTwoPointFigure = class(TFigureBase)
-    procedure AddPoint(APoint: TPoint); virtual;
-  end;
-
-  TPen = class(TFigureBase)
+  TRectangle = class(TFigureBase)
     procedure Draw(ACanvas: TCanvas); override;
   end;
 
-  TRectangle = class(TTwoPointFigure)
+  TRoundRectangle = class(TFigureBase)
     procedure Draw(ACanvas: TCanvas); override;
   end;
 
-  TEllipse = class(TTwoPointFigure)
+  TEllipse = class(TFigureBase)
     procedure Draw(ACanvas: TCanvas); override;
   end;
 
-  TLine = class(TTwoPointFigure)
+  TLine = class(TFigureBase)
     procedure Draw(ACanvas: TCanvas); override;
   end;
 
@@ -47,47 +42,59 @@ type
     procedure Draw(ACanvas: TCanvas); override;
   end;
 
+  TFigureClass = class of TFigureBase;
+
 var
-  FiguresRegister: array of TFigureClass;
-  FiguresBitmaps: array of TBitMap;
+  CanvasFigures: array of TFigureBase;
 
 implementation
 
-constructor TFigureBase.Create(FPoint: TPoint; PColor: TColor; BColor: TColor; PWidth: Integer);
+constructor TFigureBase.Create(FPoint: TDPoint);
 begin
-  SetLength(Points, Length(Points) + 1);
-  Points[High(Points)] := FPoint;
-  PenColor := PColor;
-  PenWidth := PWidth;
-  BrushColor := BColor;
+  SetLength(DPoints, Length(DPoints) + 1);
+  DPoints[High(DPoints)] := FPoint;
 end;
 
 procedure TFigureBase.Draw(ACanvas: TCanvas);
+var i: integer;
 begin
   with ACanvas do
   begin
     Pen.Width := PenWidth;
+    Pen.Style := PenStyle;
     Pen.Color := PenColor;
     Brush.Color := BrushColor;
+    Brush.Style := BrushStyle;
+  end;
+  SetLength(Points, Length(DPoints));
+  for i := Low(DPoints) to High(DPoints) do
+    Points[i] := WorldToScreen(DPoints[i]);
+end;
+
+function TFigureBase.FindTopLeft: TDPoint;
+var i: TDPoint;
+begin
+  Result := DPoints[Low(DPoints)];
+  for i in DPoints do
+  begin
+    if (i.x < Result.x) then
+      Result.x := i.x;
+    if (i.y < Result.y) then
+      Result.y := i.y;
   end;
 end;
 
-procedure TFigureBase.AddPoint(APoint: TPoint);
+function TFigureBase.FindBottomRight: TDPoint;
+var i: TDPoint;
 begin
-  SetLength(Points, Length(Points) + 1);
-  Points[High(Points)] := APoint;
-end;
-
-procedure TTwoPointFigure.AddPoint(APoint: TPoint);
-begin
-  SetLength(Points, 2);
-  Points[High(Points)] := APoint;
-end;
-
-procedure TPen.Draw(ACanvas: TCanvas);
-begin
-  inherited;
-  ACanvas.PolyLine(Points);
+  Result := DPoints[Low(Points)];
+  for i in DPoints do
+  begin
+    if (i.x > Result.x) then
+      Result.x := i.x;
+    if (i.y > Result.y) then
+      Result.y := i.y;
+  end;
 end;
 
 procedure TRectangle.Draw(ACanvas: TCanvas);
@@ -98,6 +105,18 @@ begin
     Points[Low(Points)].y,
     Points[High(Points)].x,
     Points[High(Points)].y
+  );
+end;
+
+procedure TRoundRectangle.Draw(ACanvas: TCanvas);
+begin
+  inherited;
+  ACanvas.RoundRect(
+    Points[Low(Points)].x,
+    Points[Low(Points)].y,
+    Points[High(Points)].x,
+    Points[High(Points)].y,
+    Rounding, Rounding
   );
 end;
 
@@ -127,24 +146,4 @@ begin
   ACanvas.Polyline(Points);
 end;
 
-procedure RegisterFigure(AFigureClass: TFigureClass; AFigureBitmap: String);
-var bmp: TBitmap;
-begin
-  SetLength(FiguresRegister, Length(FiguresRegister) + 1);
-  FiguresRegister[High(FiguresRegister)] := AFigureClass;
-
-  bmp := TBitmap.Create;
-  bmp.LoadFromFile(AFigureBitmap);
-  SetLength(FiguresBitmaps, Length(FiguresBitmaps) + 1);
-  FiguresBitmaps[High(FiguresBitmaps)] := bmp;
-end;
-
-initialization
-RegisterFigure(TPen, 'Icons/TPen.bmp');
-RegisterFigure(TLine, 'Icons/TLine.bmp');
-RegisterFigure(TPolyLine, 'Icons/TPolyLine.bmp');
-RegisterFigure(TRectangle, 'Icons/TRectangle.bmp');
-RegisterFigure(TEllipse, 'Icons/TEllipse.bmp');
-
 end.
-
