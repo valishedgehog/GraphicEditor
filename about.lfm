@@ -1,0 +1,72 @@
+object AboutForm: TAboutForm
+  Left = 605
+  Height = 225
+  Top = 382
+  Width = 280
+  BorderIcons = [biSystemMenu, biMinimize]
+  Caption = 'About'
+  ClientHeight = 225
+  ClientWidth = 280
+  Constraints.MaxHeight = 225
+  Constraints.MaxWidth = 280
+  Constraints.MinHeight = 225
+  Constraints.MinWidth = 280
+  LCLVersion = '1.6.4.0'
+  object AppName: TLabel
+    Left = 20
+    Height = 40
+    Top = 20
+    Width = 240
+    AutoSize = False
+    Caption = 'Graphic Editor'
+    Font.Height = 40
+    Font.Style = [fsBold]
+    ParentColor = False
+    ParentFont = False
+  end
+  object Author: TLabel
+    Left = 20
+    Height = 20
+    Top = 60
+    Width = 240
+    AutoSize = False
+    Caption = '(C) Melnikov Anton (2017)'
+    Font.Height = 20
+    ParentColor = False
+    ParentFont = False
+  end
+  object Email: TLabel
+    Left = 20
+    Height = 25
+    Top = 110
+    Width = 240
+    AutoSize = False
+    Caption = 'antonmelnikovig@gmail.com'
+    Font.Height = 25
+    ParentColor = False
+    ParentFont = False
+  end
+  object GitHub: TLabel
+    Left = 20
+    Height = 25
+    Top = 140
+    Width = 240
+    AutoSize = False
+    Caption = 'github.com/antonmelnikovig'
+    Font.Height = 25
+    Font.Style = [fsUnderline]
+    ParentColor = False
+    ParentFont = False
+    OnClick = GitHubClick
+  end
+  object CloseButton: TButton
+    Left = 20
+    Height = 25
+    Top = 180
+    Width = 240
+    Caption = 'Close'
+    OnClick = CloseButtonClick
+    ParentFont = False
+    TabOrder = 0
+  end
+end
