@@ -57,6 +57,7 @@ type
 
 var
   CanvasFigures: array of TFigureBase;
+  SelectedFigures: array of boolean;
 
 implementation
 

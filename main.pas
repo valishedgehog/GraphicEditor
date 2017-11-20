@@ -13,6 +13,8 @@ type
 	{ TMainForm }
 
   TMainForm = class(TForm)
+    MEdit: TMenuItem;
+	  MEditDelete: TMenuItem;
     ScaleSpin: TFloatSpinEdit;
     HorScrollBar: TScrollBar;
     ScaleLabel: TLabel;
@@ -29,6 +31,7 @@ type
     ToolsButtons: TPanel;
     ToolsPanel: TPanel;
     procedure FormCreate(Sender: TObject);
+		procedure MEditDeleteClick(Sender: TObject);
     procedure MHelpAboutClick(Sender: TObject);
     procedure MFileExitClick(Sender: TObject);
     procedure PaintBoxMouseDown(Sender: TObject; Button: TMouseButton;
@@ -236,6 +239,21 @@ begin
     currentTool := ToolsRegister[0];
     currentTool.ShowParameters;
   end;
+end;
+
+procedure TMainForm.MEditDeleteClick(Sender: TObject);
+var i, j: integer;
+begin
+  j := 0;
+  for i := Low(CanvasFigures) to High(CanvasFigures) do
+    if (SelectedFigures[i] = True) then
+      CanvasFigures[i].Free
+    else begin
+      CanvasFigures[j] := CanvasFigures[i];
+      j := j + 1;
+    end;
+  SetLength(CanvasFigures, j);
+  PaintBox.Invalidate;
 end;
 
 initialization

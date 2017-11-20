@@ -5,7 +5,7 @@ unit tools;
 interface
 
 uses
-  Classes, SysUtils, Graphics, ExtCtrls, Controls, math, figures, parameters, transform;
+  Classes, SysUtils, Graphics, ExtCtrls, Controls, LCLIntf, LCLType, math, figures, parameters, transform;
 
 type
 
@@ -43,6 +43,10 @@ type
 	end;
 
   TMagnifierTool = class(TActionTool)
+    procedure MouseUp(APoint: TPoint; Button: TMouseButton); override;
+	end;
+
+  TSelectionTool = class(TInvisibleActionTool)
     procedure MouseUp(APoint: TPoint; Button: TMouseButton); override;
 	end;
 
@@ -84,6 +88,8 @@ var p: TParameter;
 begin
   SetLength(CanvasFigures, Length(CanvasFigures) + 1);
   CanvasFigures[High(CanvasFigures)] := FigureClass.Create(ScreenToWorld(FPoint));
+  SetLength(SelectedFigures, Length(SelectedFigures) + 1);
+  SelectedFigures[High(SelectedFigures)] := False;
   with CanvasFigures[High(CanvasFigures)] do
   begin
     PenWidth := INIT_PEN_WIDTH;
@@ -233,6 +239,23 @@ begin
 	end;
 end;
 
+procedure TSelectionTool.MouseUp(APoint: TPoint; Button: TMouseButton);
+var i: integer;
+begin
+  if Length(CanvasFigures) > 1 then
+  for i := High(CanvasFigures)-1 downto Low(CanvasFigures) do
+    with CanvasFigures[i] do
+    begin
+      DeleteObject(Region);
+      SetRegion;
+      if (PtInRegion(Region, APoint.x, APoint.y) = true) then
+      begin
+        SelectedFigures[i] := True;
+        Exit;
+      end;
+    end;
+end;
+
 procedure TPenTool.CreateParameters(APanel: TPanel);
 begin
   inherited;
@@ -294,6 +317,7 @@ begin
 end;
 
 Initialization
+RegisterTool(TSelectionTool.Create, TRectangle, 'Icons/TSelectionTool.bmp');
 RegisterTool(THandTool.Create, TRectangle, 'Icons/THandTool.bmp');
 RegisterTool(TMagnifierTool.Create, TRectangle, 'Icons/TMagnifierTool.bmp');
 RegisterTool(TPenTool.Create, TPolyLine, 'Icons/TPenTool.bmp');
