@@ -89,6 +89,13 @@ constructor TFigureBase.Create(FPoint: TDPoint);
 begin
   SetLength(DPoints, Length(DPoints) + 1);
   DPoints[High(DPoints)] := FPoint;
+
+  PenStyle := INIT_PEN_STYLE;
+  BrushStyle := INIT_BRUSH_STYLE;
+  PenColor := INIT_PEN_COLOR;
+  BrushColor := INIT_BRUSH_COLOR;
+  PenWidth := INIT_PEN_WIDTH;
+  Rounding := INIT_ROUNDING;
 end;
 
 procedure TFigureBase.Draw(ACanvas: TCanvas);
@@ -136,10 +143,10 @@ end;
 procedure TRectangle.SetRegion;
 begin
   Region := CreateRectRgn(
-    WorldToScreen(DPoints[Low(DPoints)]).x,
-    WorldToScreen(DPoints[Low(DPoints)]).y,
-    WorldToScreen(DPoints[High(DPoints)]).x,
-    WorldToScreen(DPoints[High(DPoints)]).y
+    WorldToScreen(DPoints[Low(DPoints)]).x - PenWidth div 2,
+    WorldToScreen(DPoints[Low(DPoints)]).y - PenWidth div 2,
+    WorldToScreen(DPoints[High(DPoints)]).x + PenWidth div 2,
+    WorldToScreen(DPoints[High(DPoints)]).y + PenWidth div 2
   );
 end;
 
@@ -157,10 +164,10 @@ end;
 procedure TRoundRectangle.SetRegion;
 begin
   Region := CreateRoundRectRgn(
-    WorldToScreen(DPoints[Low(DPoints)]).x,
-    WorldToScreen(DPoints[Low(DPoints)]).y,
-    WorldToScreen(DPoints[High(DPoints)]).x,
-    WorldToScreen(DPoints[High(DPoints)]).y,
+    WorldToScreen(DPoints[Low(DPoints)]).x - PenWidth div 2,
+    WorldToScreen(DPoints[Low(DPoints)]).y - PenWidth div 2,
+    WorldToScreen(DPoints[High(DPoints)]).x + PenWidth div 2,
+    WorldToScreen(DPoints[High(DPoints)]).y + PenWidth div 2,
     Rounding, Rounding
   );
 end;
@@ -180,10 +187,10 @@ end;
 procedure TEllipse.SetRegion;
 begin
   Region := CreateEllipticRgn(
-    WorldToScreen(DPoints[Low(DPoints)]).x,
-    WorldToScreen(DPoints[Low(DPoints)]).y,
-    WorldToScreen(DPoints[High(DPoints)]).x,
-    WorldToScreen(DPoints[High(DPoints)]).y
+    WorldToScreen(DPoints[Low(DPoints)]).x - PenWidth div 2,
+    WorldToScreen(DPoints[Low(DPoints)]).y - PenWidth div 2,
+    WorldToScreen(DPoints[High(DPoints)]).x + PenWidth div 2,
+    WorldToScreen(DPoints[High(DPoints)]).y + PenWidth div 2
   );
 end;
 
