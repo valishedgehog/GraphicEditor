@@ -15,11 +15,12 @@ type
     DPoints: TDPointsArray;
     Points: TPointsArray;
     Region: HRGN;
+    Selected: Boolean;
     PenStyle: TPenStyle;
     BrushStyle: TBrushStyle;
     PenColor, BrushColor: TColor;
     PenWidth, Rounding: integer;
-    constructor Create(FPoint: TDPoint);
+    constructor Create(FPoint: TDPoint); virtual;
     procedure SetRegion; virtual; abstract;
     procedure Draw(ACanvas: TCanvas); virtual;
     function FindTopLeft: TDPoint;
@@ -30,6 +31,11 @@ type
     procedure SetRegion; override;
     procedure Draw(ACanvas: TCanvas); override;
   end;
+
+  TSelection = class(TRectangle)
+    SelectedFigure: integer;
+    constructor Create;
+	end;
 
   TRoundRectangle = class(TFigureBase)
     procedure SetRegion; override;
@@ -57,7 +63,7 @@ type
 
 var
   CanvasFigures: array of TFigureBase;
-  SelectedFigures: array of boolean;
+  SelectionFigures: array of TSelection;
 
 implementation
 
@@ -159,6 +165,15 @@ begin
     Points[High(Points)].x,
     Points[High(Points)].y
   );
+end;
+
+constructor TSelection.Create;
+begin
+  PenWidth := 1;
+  PenStyle := psDash;
+  PenColor := clBlack;
+  BrushColor := clWhite;
+  BrushStyle := bsClear;
 end;
 
 procedure TRoundRectangle.SetRegion;

@@ -77,7 +77,7 @@ begin
   begin
     if not isDrawingPolyLine then
     begin
-      currentTool.CreateFigure(Point(X, Y));
+      currentTool.MouseDown(Point(X, Y));
       isDrawing := True;
       if currentTool is TPolyLineTool then
         isDrawingPolyLine := True;
@@ -110,7 +110,7 @@ begin
   currentTool.MouseUp(Point(X, Y), Button);
   if (not isDrawingPolyLine) then
     isDrawing := False;
-  ScaleSpin.Value := Scale * 100;
+	ScaleSpin.Value := Scale * 100;
   SetScrollBars;
   PaintBox.Invalidate;
 end;
@@ -129,17 +129,23 @@ procedure TMainForm.PaintBoxPaint(Sender: TObject);
 var
   element: TFigureBase;
 begin
-  PaintBox.Canvas.Brush.Color := clWhite;
-  PaintBox.Canvas.FillRect(0, 0, Width, Height);
-  for element in CanvasFigures do
-    element.Draw(PaintBox.Canvas);
+  with PaintBox do
+  begin
+    Canvas.Brush.Color := clWhite;
+    Canvas.FillRect(0, 0, Width, Height);
+    for element in CanvasFigures do
+      element.Draw(Canvas);
+    for element in SelectionFigures do
+      element.Draw(Canvas);
+	end;
 end;
 
 procedure TMainForm.OnClickTool(Sender: TObject);
 begin
-  currentTool.HideParameters;
+  currentTool.FinishWork;
   currentTool := ToolsRegister[(Sender as TBitBtn).Tag];
   currentTool.ShowParameters;
+  PaintBox.Invalidate;
 end;
 
 procedure TMainForm.PaintBoxResize(Sender: TObject);
@@ -244,16 +250,22 @@ end;
 procedure TMainForm.MEditDeleteClick(Sender: TObject);
 var i, j: integer;
 begin
-  j := 0;
-  for i := Low(CanvasFigures) to High(CanvasFigures) do
-    if (SelectedFigures[i] = True) then
-      CanvasFigures[i].Free
-    else begin
-      CanvasFigures[j] := CanvasFigures[i];
-      j := j + 1;
-    end;
-  SetLength(CanvasFigures, j);
-  PaintBox.Invalidate;
+  if currentTool is TSelectionTool then
+  begin
+    j := 0;
+    for i := Low(CanvasFigures) to High(CanvasFigures) do
+      if (CanvasFigures[i].Selected = True) then
+      begin
+        (currentTool as TSelectionTool).RemoveSelection(i);
+        CanvasFigures[i].Free;
+			end
+			else begin
+        CanvasFigures[j] := CanvasFigures[i];
+        j := j + 1;
+      end;
+    SetLength(CanvasFigures, j);
+    PaintBox.Invalidate;
+  end;
 end;
 
 initialization

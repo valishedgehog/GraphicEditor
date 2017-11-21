@@ -14,13 +14,14 @@ type
     Panel: TPanel;
     Params: TParamsArray;
     FigureClass: TFigureClass;
-    procedure CreateFigure(FPoint: TPoint); virtual;
+    procedure MouseDown(FPoint: TPoint); virtual;
     procedure AddPoint(APoint: TPoint); virtual;
     procedure MouseMove(APoint: TPoint); virtual;
     procedure MouseUp(APoint: TPoint; Button: TMouseButton); virtual;
     procedure CreateParameters(APanel: TPanel); virtual;
     procedure ShowParameters;
-    procedure HideParameters;
+    procedure FinishWork; virtual;
+    procedure DestroyFigure;
     procedure AddPenParameters(APanel: TPanel);
     procedure AddBrushParameters(APanel: TPanel);
 	end;
@@ -30,12 +31,12 @@ type
 	end;
 
   TActionTool = class(TTwoPointTool)
-    procedure CreateFigure(FPoint: TPoint); override;
+    procedure MouseDown(FPoint: TPoint); override;
     procedure CreateParameters(APanel: TPanel); override;
 	end;
 
   TInvisibleActionTool = class(TActionTool)
-    procedure CreateFigure(FPoint: TPoint); override;
+    procedure MouseDown(FPoint: TPoint); override;
 	end;
 
   THandTool = class(TInvisibleActionTool)
@@ -48,6 +49,9 @@ type
 
   TSelectionTool = class(TInvisibleActionTool)
     procedure MouseUp(APoint: TPoint; Button: TMouseButton); override;
+    procedure AddSelection(figureIndex: integer);
+    procedure RemoveSelection(figureIndex: integer);
+    procedure FinishWork; override;
 	end;
 
   TPenTool = class(TTool)
@@ -83,13 +87,11 @@ var ToolsRegister: array of TTool;
 
 implementation
 
-procedure TTool.CreateFigure(FPoint: TPoint);
+procedure TTool.MouseDown(FPoint: TPoint);
 var p: TParameter;
 begin
   SetLength(CanvasFigures, Length(CanvasFigures) + 1);
   CanvasFigures[High(CanvasFigures)] := FigureClass.Create(ScreenToWorld(FPoint));
-  SetLength(SelectedFigures, Length(SelectedFigures) + 1);
-  SelectedFigures[High(SelectedFigures)] := False;
   with CanvasFigures[High(CanvasFigures)] do
   begin
     PenWidth := INIT_PEN_WIDTH;
@@ -98,6 +100,8 @@ begin
     PenStyle := INIT_PEN_STYLE;
     BrushStyle := INIT_BRUSH_STYLE;
     Rounding := INIT_ROUNDING;
+
+    Selected := False;
 
     for p in Params do
     case p.ParamLabel.Caption of
@@ -126,7 +130,9 @@ begin
 end;
 
 procedure TTool.MouseUp(APoint: TPoint; Button: TMouseButton);
-begin end;
+begin
+
+end;
 
 procedure TTool.CreateParameters(APanel: TPanel);
 begin
@@ -145,12 +151,18 @@ begin
   Panel.Visible := True;
 end;
 
-procedure TTool.HideParameters;
+procedure TTool.FinishWork;
 var i: TParameter;
 begin
   Panel.Visible := False;
   for i in Params do
     i.SetParamToInit;
+end;
+
+procedure TTool.DestroyFigure;
+begin
+  CanvasFigures[High(CanvasFigures)].Free;
+  SetLength(CanvasFigures, Length(CanvasFigures) - 1);
 end;
 
 procedure TTool.AddPenParameters(APanel: TPanel);
@@ -179,7 +191,7 @@ begin
 	end;
 end;
 
-procedure TActionTool.CreateFigure(FPoint: TPoint);
+procedure TActionTool.MouseDown(FPoint: TPoint);
 begin
   SetLength(CanvasFigures, Length(CanvasFigures) + 1);
   CanvasFigures[High(CanvasFigures)] := FigureClass.Create(ScreenToWorld(FPoint));
@@ -195,7 +207,7 @@ begin
   inherited;
 end;
 
-procedure TInvisibleActionTool.CreateFigure(FPoint: TPoint);
+procedure TInvisibleActionTool.MouseDown(FPoint: TPoint);
 begin
   inherited;
   CanvasFigures[High(CanvasFigures)].PenStyle := psClear;
@@ -234,7 +246,7 @@ begin
           (TopLeft.y + BottomRight.y) / 2)), NewScale);
         inherited;
       end;
-    SetLength(CanvasFigures, Length(CanvasFigures) - 1);
+    DestroyFigure;
     end;
 	end;
 end;
@@ -242,18 +254,73 @@ end;
 procedure TSelectionTool.MouseUp(APoint: TPoint; Button: TMouseButton);
 var i: integer;
 begin
-  if Length(CanvasFigures) > 1 then
-  for i := High(CanvasFigures)-1 downto Low(CanvasFigures) do
+  if (Button = mbLeft) then DestroyFigure;
+  if Length(CanvasFigures) > 0 then
+  for i := High(CanvasFigures) downto Low(CanvasFigures) do
     with CanvasFigures[i] do
     begin
       DeleteObject(Region);
       SetRegion;
       if (PtInRegion(Region, APoint.x, APoint.y) = true) then
       begin
-        SelectedFigures[i] := True;
-        Exit;
-      end;
+        case Button of
+          mbLeft:
+            if (CanvasFigures[i].Selected = False) then
+              AddSelection(i);
+					mbRight:
+            if (CanvasFigures[i].Selected = True) then
+              RemoveSelection(i);
+				end;
+				Exit;
+      end
     end;
+end;
+
+procedure TSelectionTool.AddSelection(figureIndex: integer);
+var p1, p2: TDPoint; width: integer;
+begin
+  CanvasFigures[figureIndex].Selected := True;
+  SetLength(SelectionFigures, Length(SelectionFigures) + 1);
+  SelectionFigures[High(SelectionFigures)] := TSelection.Create;
+  with SelectionFigures[High(SelectionFigures)] do
+  begin
+    SelectedFigure := figureIndex;
+    with CanvasFigures[SelectedFigure] do
+    begin
+      p1 := FindTopLeft;
+      p2 := FindBottomRight;
+      width := PenWidth;
+		end;
+		SetLength(DPoints, 2);
+    DPoints[Low(DPoints)] := DPoint(p1.x - 7 - width, p1.y - 7 - width);
+    DPoints[High(DPoints)] := DPoint(p2.x + 7 + width, p2.y + 7 + width);
+  end;
+end;
+
+procedure TSelectionTool.RemoveSelection(figureIndex: integer);
+var i, j: integer;
+begin
+  CanvasFigures[figureIndex].Selected := False;
+  j := 0;
+  for i := Low(SelectionFigures) to High(SelectionFigures) do
+    if (SelectionFigures[i].SelectedFigure = figureIndex) then
+      SelectionFigures[i].Free
+    else begin
+      SelectionFigures[j] := SelectionFigures[i];
+      j := j + 1;
+    end;
+  SetLength(SelectionFigures, j);
+end;
+
+procedure TSelectionTool.FinishWork;
+var i: TFigureBase;
+begin
+  inherited;
+  for i in CanvasFigures do
+    i.Selected := False;
+  for i in SelectionFigures do
+    i.Free;
+  SetLength(SelectionFigures, 0);
 end;
 
 procedure TPenTool.CreateParameters(APanel: TPanel);
