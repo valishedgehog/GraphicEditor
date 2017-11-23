@@ -58,11 +58,12 @@ type
   end;
 
   TFigureClass = class of TFigureBase;
+  TFiguresArray = array of TFigureBase;
 
   function RectAroundLine(P1, P2: TPoint; Width: Integer): PPoint;
 
 var
-  CanvasFigures: array of TFigureBase;
+  CanvasFigures: TFiguresArray;
   SelectionFigures: array of TSelection;
 
 implementation

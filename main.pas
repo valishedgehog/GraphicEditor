@@ -6,7 +6,7 @@ interface
 
 uses
   Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, Menus,
-  ExtCtrls, Buttons, StdCtrls, Spin, Math, about, tools, figures, transform, Types;
+  ExtCtrls, Buttons, StdCtrls, Spin, Math, Types, about, tools, figures, transform;
 
 type
 
@@ -15,6 +15,8 @@ type
   TMainForm = class(TForm)
     MEdit: TMenuItem;
 	  MEditDelete: TMenuItem;
+    MEditUp: TMenuItem;
+    MEditDown: TMenuItem;
     ScaleSpin: TFloatSpinEdit;
     HorScrollBar: TScrollBar;
     ScaleLabel: TLabel;
@@ -31,7 +33,9 @@ type
     ToolsButtons: TPanel;
     ToolsPanel: TPanel;
     procedure FormCreate(Sender: TObject);
-		procedure MEditDeleteClick(Sender: TObject);
+    procedure MEditDeleteClick(Sender: TObject);
+    procedure MEditDownClick(Sender: TObject);
+    procedure MEditUpClick(Sender: TObject);
     procedure MHelpAboutClick(Sender: TObject);
     procedure MFileExitClick(Sender: TObject);
     procedure PaintBoxMouseDown(Sender: TObject; Button: TMouseButton;
@@ -53,8 +57,6 @@ type
 var
   MainForm: TMainForm;
   currentTool: TTool;
-  isDrawing: boolean;
-  isDrawingPolyLine: boolean;
 
 implementation
 
@@ -109,8 +111,7 @@ procedure TMainForm.PaintBoxPaint(Sender: TObject);
 var
   element: TFigureBase;
 begin
-  with PaintBox do
-  begin
+  with PaintBox do begin
     Canvas.Brush.Color := clWhite;
     Canvas.FillRect(0, 0, Width, Height);
     for element in CanvasFigures do
@@ -137,8 +138,7 @@ end;
 
 procedure TMainForm.ScaleSpinChange(Sender: TObject);
 begin
-  with ScaleSpin do
-  begin
+  with ScaleSpin do begin
     try
       if StrToFloat(Caption) > MaxValue then
         Caption := FloatToStr(MaxValue)
@@ -165,8 +165,7 @@ begin
   VMax := Round(Max(Offset.y + 10,  10));
 
   Corner := ScreenToWorld(Point(PBWidth, PBHeight));
-  for i in CanvasFigures do
-  begin
+  for i in CanvasFigures do begin
     HMin := Min(HMin, Round(i.FindTopLeft.x - 10));
     HMax := Max(HMax, Round(Offset.x + i.FindBottomRight.x - Corner.x + 10));
     VMin := Min(VMin, Round(i.FindTopLeft.y - 10));
@@ -202,8 +201,7 @@ begin
   PBHeight := PaintBox.Height;
   PBWidth  := PaintBox.Width;
 
-  for i := Low(ToolsRegister) to High(ToolsRegister) do
-  begin
+  for i := Low(ToolsRegister) to High(ToolsRegister) do begin
     ToolsRegister[i].CreateParameters(ParametersPanel);
     Button := TBitBtn.Create(ToolsButtons);
     Button.Parent := ToolsButtons;
@@ -220,8 +218,7 @@ begin
   if Length(ToolsRegister) mod 3 > 0 then k := 1
   else k := 0;
   ToolsButtons.Height := 32 * ((Length(ToolsRegister)) div 3 + k);
-  if Length(ToolsRegister) > 0 then
-  begin
+  if Length(ToolsRegister) > 0 then begin
     currentTool := ToolsRegister[0];
     currentTool.ShowParameters;
   end;
@@ -230,12 +227,10 @@ end;
 procedure TMainForm.MEditDeleteClick(Sender: TObject);
 var i, j: integer;
 begin
-  if currentTool is TSelectionTool then
-  begin
+  if currentTool is TSelectionTool then begin
     j := 0;
     for i := Low(CanvasFigures) to High(CanvasFigures) do
-      if CanvasFigures[i].Selected then
-      begin
+      if CanvasFigures[i].Selected then begin
         (currentTool as TSelectionTool).RemoveSelection(i);
         CanvasFigures[i].Free;
 			end
@@ -248,8 +243,14 @@ begin
   end;
 end;
 
-initialization
-isDrawing := False;
-isDrawingPolyLine := False;
+procedure TMainForm.MEditDownClick(Sender: TObject);
+begin
+  // TODO
+end;
+
+procedure TMainForm.MEditUpClick(Sender: TObject);
+begin
+  // TODO
+end;
 
 end.
