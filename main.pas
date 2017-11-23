@@ -14,7 +14,7 @@ type
 
   TMainForm = class(TForm)
     MEdit: TMenuItem;
-	  MEditDelete: TMenuItem;
+    MEditDelete: TMenuItem;
     MEditUp: TMenuItem;
     MEditDown: TMenuItem;
     ScaleSpin: TFloatSpinEdit;
@@ -92,7 +92,7 @@ procedure TMainForm.PaintBoxMouseUp(Sender: TObject; Button: TMouseButton;
   Shift: TShiftState; X, Y: integer);
 begin
   currentTool.MouseUp(Point(X, Y), Button);
-	ScaleSpin.Value := Scale * 100;
+  ScaleSpin.Value := Scale * 100;
   SetScrollBars;
   PaintBox.Invalidate;
 end;
@@ -118,7 +118,7 @@ begin
       element.Draw(Canvas);
     for element in SelectionFigures do
       element.Draw(Canvas);
-	end;
+  end;
 end;
 
 procedure TMainForm.OnClickTool(Sender: TObject);
@@ -227,20 +227,20 @@ end;
 procedure TMainForm.MEditDeleteClick(Sender: TObject);
 var i, j: integer;
 begin
-  if currentTool is TSelectionTool then begin
+  if (currentTool is TSelectionTool) and (Length(CanvasFigures) > 0) then begin
     j := 0;
     for i := Low(CanvasFigures) to High(CanvasFigures) do
       if CanvasFigures[i].Selected then begin
         (currentTool as TSelectionTool).RemoveSelection(i);
         CanvasFigures[i].Free;
-			end
-			else begin
+      end
+      else begin
         CanvasFigures[j] := CanvasFigures[i];
         j := j + 1;
       end;
-    SetLength(CanvasFigures, j);
-    PaintBox.Invalidate;
   end;
+  SetLength(CanvasFigures, j);
+  PaintBox.Invalidate;
 end;
 
 procedure TMainForm.MEditDownClick(Sender: TObject);

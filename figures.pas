@@ -35,7 +35,7 @@ type
   TSelection = class(TRectangle)
     SelectedFigure: integer;
     constructor Create;
-	end;
+  end;
 
   TRoundRectangle = class(TFigureBase)
     procedure SetRegion; override;
@@ -75,7 +75,7 @@ begin
   begin
     TempPoint := P1;
     P1 := P2; P2 := TempPoint;
-	end;
+  end;
 
   if (P1.y > P2.y) then
   begin
@@ -83,13 +83,13 @@ begin
     Result[1] := Point(P1.x, P1.y + Width + 5);
     Result[2] := Point(P2.x + Width + 5, P2.y);
     Result[3] := Point(P2.x, P2.y - Width - 5);
-	end
+  end
   else begin
     Result[0] := Point(P1.x - Width - 5, P1.y);
     Result[1] := Point(P1.x, P1.y - Width - 5);
     Result[2] := Point(P2.x + Width + 5, P2.y);
     Result[3] := Point(P2.x, P2.y + Width + 5);
-	end;
+  end;
 end;
 
 constructor TFigureBase.Create(FPoint: TDPoint);
@@ -254,8 +254,8 @@ begin
     else begin
       CombineRgn(Region, Region, TempRegion, RGN_OR);
       DeleteObject(TempRegion);
-		end;
-	end;
+    end;
+  end;
 end;
 
 procedure TPolyLine.Draw(ACanvas: TCanvas);

@@ -16,7 +16,7 @@ type
     constructor Create(APanel: TPanel; ACaption: String);
     procedure ChangeParameter(Sender: TObject); virtual; abstract;
     procedure SetParamToInit; virtual; abstract;
-	end;
+  end;
 
   TColorParameter = class(TParameter)
     Param, InitValue: TColor;
@@ -24,7 +24,7 @@ type
     constructor Create(APanel: TPanel; ACaption: String; Init: TColor);
     procedure ChangeParameter(Sender: TObject); override;
     procedure SetParamToInit; override;
-	end;
+  end;
 
   TIntegerSpinParameter = class(TParameter)
     Param, InitValue: Integer;
@@ -32,38 +32,38 @@ type
     constructor Create(APanel: TPanel; ACaption: String; Init: Integer);
     procedure ChangeParameter(Sender: TObject); override;
     procedure SetParamToInit; override;
-	end;
+  end;
 
   TComboBoxParameter = class(TParameter)
     ParamControl: TComboBox;
     constructor Create(APanel: TPanel; ACaption: String);
-	end;
+  end;
 
   TPenStyleParameter = class(TComboBoxParameter)
     Param, InitValue: TPenStyle;
     constructor Create(APanel: TPanel; ACaption: String; Init: TPenStyle);
     procedure ChangeParameter(Sender: TObject); override;
     procedure SetParamToInit; override;
-	end;
+  end;
 
   TBrushStyleParameter = class(TComboBoxParameter)
     Param, InitValue: TBrushStyle;
     constructor Create(APanel: TPanel; ACaption: String; Init: TBrushStyle);
     procedure ChangeParameter(Sender: TObject); override;
     procedure SetParamToInit; override;
-	end;
+  end;
 
   TParamsArray = array of TParameter;
 
   TBrushStyleRecord = record
     Name: String;
     BrushStyle: TBrushStyle;
-	end;
+  end;
 
   TPenStyleRecord = record
     Name: String;
     PenStyle: TPenStyle;
-	end;
+  end;
 
 const
   PEN_WIDTH_LABEL = 'Pen Width';
@@ -104,19 +104,17 @@ implementation
 constructor TParameter.Create(APanel: TPanel; ACaption: String);
 begin
   ParamPanel := TPanel.Create(APanel);
-  with ParamPanel do
-  begin
+  with ParamPanel do begin
     Align := alTop;
     Parent := APanel;
     Width := Parent.Width - 4;
     Height := 52;
     Left := 2;
     Caption := '';
-	end;
+  end;
 
   ParamLabel := TLabel.Create(ParamPanel);
-  with ParamLabel do
-  begin
+  with ParamLabel do begin
     Parent := ParamPanel;
     AutoSize := False;
     Caption := ACaption;
@@ -125,7 +123,7 @@ begin
     Top := 0;
     Alignment := taCenter;
     Font.Height := 20;
-	end;
+  end;
 end;
 
 constructor TColorParameter.Create(APanel: TPanel;
@@ -133,8 +131,7 @@ constructor TColorParameter.Create(APanel: TPanel;
 begin
   inherited Create(APanel, ACaption);
   ParamControl := TColorButton.Create(ParamPanel);
-  with ParamControl do
-  begin
+  with ParamControl do begin
     Parent := ParamPanel;
     AutoSize := False;
     ColorDialog := TColorDialog.Create(ParamPanel);
@@ -143,7 +140,7 @@ begin
     Caption := '';
     Width := Parent.Width;
     OnColorChanged := @ChangeParameter;
-	end;
+  end;
   InitValue := Init;
   SetParamToInit;
 end;
@@ -166,8 +163,7 @@ constructor TIntegerSpinParameter.Create(APanel: TPanel;
 begin
   inherited Create(APanel, ACaption);
   ParamControl := TSpinEdit.Create(ParamPanel);
-  with ParamControl do
-  begin
+  with ParamControl do begin
     Parent := ParamPanel;
     AutoSize := False;
     Height := 30;
@@ -177,15 +173,14 @@ begin
     MinValue := 1;
     MaxValue := 200;
     OnEditingDone := @ChangeParameter;
-	end;
+  end;
   InitValue := Init;
   SetParamToInit;
 end;
 
 procedure TIntegerSpinParameter.ChangeParameter(Sender: TObject);
 begin
-  with ParamControl do
-  begin
+  with ParamControl do begin
     try
       if StrToInt(Caption) > MaxValue then
         Caption := IntToStr(MaxValue)
@@ -195,7 +190,7 @@ begin
       Caption := IntToStr(MinValue);
     end;
     Param := ParamControl.Value;
-	end;
+  end;
 end;
 
 procedure TIntegerSpinParameter.SetParamToInit;
@@ -209,8 +204,7 @@ constructor TComboBoxParameter.Create(APanel: TPanel; ACaption: String);
 begin
   inherited Create(APanel, ACaption);
   ParamControl := TComboBox.Create(ParamPanel);
-  with ParamControl do
-  begin
+  with ParamControl do begin
     Parent := ParamPanel;
     ReadOnly := True;
     AutoSize := False;
@@ -219,7 +213,7 @@ begin
     Top := 22;
     Font.Size := 10;
     OnChange := @ChangeParameter;
-	end;
+  end;
 end;
 
 constructor TPenStyleParameter.Create(APanel: TPanel;
