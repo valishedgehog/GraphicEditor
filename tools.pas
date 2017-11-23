@@ -5,7 +5,7 @@ unit tools;
 interface
 
 uses
-  Classes, SysUtils, Graphics, ExtCtrls, Controls, LCLIntf, LCLType, math, figures, parameters, transform;
+  Classes, SysUtils, Graphics, ExtCtrls, Controls, LCLIntf, LCLType, math, figures, parameters, transform, Dialogs;
 
 type
 
@@ -14,10 +14,12 @@ type
     Panel: TPanel;
     Params: TParamsArray;
     FigureClass: TFigureClass;
-    procedure MouseDown(FPoint: TPoint); virtual;
-    procedure AddPoint(APoint: TPoint); virtual;
+    isDrawing: Boolean;
+    procedure CreateFigure(FPoint: TPoint);
+    procedure MouseDown(FPoint: TPoint; Button: TMouseButton; Shift: TShiftState); virtual;
     procedure MouseMove(APoint: TPoint); virtual;
     procedure MouseUp(APoint: TPoint; Button: TMouseButton); virtual;
+    procedure AddPoint(APoint: TPoint); virtual;
     procedure CreateParameters(APanel: TPanel); virtual;
     procedure ShowParameters;
     procedure FinishWork; virtual;
@@ -31,12 +33,14 @@ type
 	end;
 
   TActionTool = class(TTwoPointTool)
-    procedure MouseDown(FPoint: TPoint); override;
+    initShift, initCtrl: Boolean;
+    procedure MouseDown(FPoint: TPoint; Button: TMouseButton; Shift: TShiftState); override;
     procedure CreateParameters(APanel: TPanel); override;
 	end;
 
   TInvisibleActionTool = class(TActionTool)
-    procedure MouseDown(FPoint: TPoint); override;
+    procedure MouseDown(FPoint: TPoint; Button: TMouseButton; Shift: TShiftState); override;
+    procedure MouseUp(APoint: TPoint; Button: TMouseButton); override;
 	end;
 
   THandTool = class(TInvisibleActionTool)
@@ -48,7 +52,9 @@ type
 	end;
 
   TSelectionTool = class(TInvisibleActionTool)
+    procedure MouseDown(FPoint: TPoint; Button: TMouseButton; Shift: TShiftState); override;
     procedure MouseUp(APoint: TPoint; Button: TMouseButton); override;
+    procedure ChangeSelection(i: integer; Button: TMouseButton);
     procedure AddSelection(figureIndex: integer);
     procedure RemoveSelection(figureIndex: integer);
     procedure FinishWork; override;
@@ -75,7 +81,9 @@ type
 	end;
 
   TPolyLineTool = class(TTool)
+    procedure MouseDown(FPoint: TPoint; Button: TMouseButton; Shift: TShiftState); override;
     procedure MouseMove(APoint: TPoint); override;
+    procedure MouseUp(APoint: TPoint; Button: TMouseButton); override;
     procedure CreateParameters(APanel: TPanel); override;
   end;
 
@@ -87,13 +95,12 @@ var ToolsRegister: array of TTool;
 
 implementation
 
-procedure TTool.MouseDown(FPoint: TPoint);
+procedure TTool.CreateFigure(FPoint: TPoint);
 var p: TParameter;
 begin
   SetLength(CanvasFigures, Length(CanvasFigures) + 1);
   CanvasFigures[High(CanvasFigures)] := FigureClass.Create(ScreenToWorld(FPoint));
-  with CanvasFigures[High(CanvasFigures)] do
-  begin
+  with CanvasFigures[High(CanvasFigures)] do begin
     PenWidth := INIT_PEN_WIDTH;
     PenColor := INIT_PEN_COLOR;
     BrushColor := INIT_BRUSH_COLOR;
@@ -115,12 +122,11 @@ begin
 	end;
 end;
 
-procedure TTool.AddPoint(APoint: TPoint);
+procedure TTool.MouseDown(FPoint: TPoint; Button: TMouseButton; Shift: TShiftState);
 begin
-  with CanvasFigures[High(CanvasFigures)] do
-  begin
-    SetLength(DPoints, Length(DPoints) + 1);
-    DPoints[High(DPoints)] := ScreenToWorld(APoint);
+  if (Button = mbLeft) then begin
+    CreateFigure(FPoint);
+    isDrawing := True;
 	end;
 end;
 
@@ -131,14 +137,21 @@ end;
 
 procedure TTool.MouseUp(APoint: TPoint; Button: TMouseButton);
 begin
+  isDrawing := False;
+end;
 
+procedure TTool.AddPoint(APoint: TPoint);
+begin
+  with CanvasFigures[High(CanvasFigures)] do begin
+    SetLength(DPoints, Length(DPoints) + 1);
+    DPoints[High(DPoints)] := ScreenToWorld(APoint);
+	end;
 end;
 
 procedure TTool.CreateParameters(APanel: TPanel);
 begin
   Panel := TPanel.Create(APanel);
-  with Panel do
-  begin
+  with Panel do begin
   	Parent := APanel;
     Visible := False;
     Width := Parent.Width;
@@ -154,6 +167,7 @@ end;
 procedure TTool.FinishWork;
 var i: TParameter;
 begin
+  isDrawing := False;
   Panel.Visible := False;
   for i in Params do
     i.SetParamToInit;
@@ -184,22 +198,24 @@ end;
 
 procedure TTwoPointTool.AddPoint(APoint: TPoint);
 begin
-  with CanvasFigures[High(CanvasFigures)] do
-  begin
+  with CanvasFigures[High(CanvasFigures)] do begin
     SetLength(DPoints, 2);
     DPoints[High(DPoints)] := ScreenToWorld(APoint);
 	end;
 end;
 
-procedure TActionTool.MouseDown(FPoint: TPoint);
+procedure TActionTool.MouseDown(FPoint: TPoint; Button: TMouseButton; Shift: TShiftState);
 begin
-  SetLength(CanvasFigures, Length(CanvasFigures) + 1);
-  CanvasFigures[High(CanvasFigures)] := FigureClass.Create(ScreenToWorld(FPoint));
-  with CanvasFigures[High(CanvasFigures)] do
-  begin
+  CreateFigure(FPoint);
+  isDrawing := True;
+  with CanvasFigures[High(CanvasFigures)] do begin
     PenStyle := psDash;
     BrushStyle := bsClear;
 	end;
+  if ssShift in Shift then initShift := True
+  else initShift := False;
+  if ssCtrl in Shift then initCtrl := True
+  else initCtrl := False;
 end;
 
 procedure TActionTool.CreateParameters(APanel: TPanel);
@@ -207,17 +223,23 @@ begin
   inherited;
 end;
 
-procedure TInvisibleActionTool.MouseDown(FPoint: TPoint);
+procedure TInvisibleActionTool.MouseDown(FPoint: TPoint; Button: TMouseButton; Shift: TShiftState);
 begin
   inherited;
-  CanvasFigures[High(CanvasFigures)].PenStyle := psClear;
+  with CanvasFigures[High(CanvasFigures)] do
+    PenStyle := psClear;
+end;
+
+procedure TInvisibleActionTool.MouseUp(APoint: TPoint; Button: TMouseButton);
+begin
+  inherited;
+  DestroyFigure;
 end;
 
 procedure THandTool.MouseMove(APoint: TPoint);
 begin
   inherited;
-  with CanvasFigures[High(CanvasFigures)] do
-  begin
+  with CanvasFigures[High(CanvasFigures)] do begin
     Offset.x := Offset.x + DPoints[Low(DPoints)].x - DPoints[High(DPoints)].x;
     Offset.y := Offset.y + DPoints[Low(DPoints)].y - DPoints[High(DPoints)].y;
   end;
@@ -231,15 +253,13 @@ begin
   case Button of
     mbRight: ZoomPoint(APoint, Scale - 0.5);
     mbLeft: begin
-      with CanvasFigures[High(CanvasFigures)] do
-      begin
+      with CanvasFigures[High(CanvasFigures)] do begin
         TopLeft := FindTopLeft;
         BottomRight := FindBottomRight;
 	    end;
       if (sqr(TopLeft.x - BottomRight.x) + sqr(TopLeft.y - BottomRight.y) < 16*16) then
         ZoomPoint(APoint, Scale + 0.5)
-      else
-      begin
+      else begin
         NewScale := Scale * Min(PBWidth / Scale / (BottomRight.x - TopLeft.x),
           PBHeight / Scale / (BottomRight.y - TopLeft.y));
         ZoomPoint(WorldToScreen(DPoint((TopLeft.x + BottomRight.x) / 2,
@@ -251,42 +271,69 @@ begin
 	end;
 end;
 
-procedure TSelectionTool.MouseUp(APoint: TPoint; Button: TMouseButton);
-var i: integer;
+procedure TSelectionTool.MouseDown(FPoint: TPoint; Button: TMouseButton; Shift: TShiftState);
 begin
-  if (Button = mbLeft) then DestroyFigure;
-  if Length(CanvasFigures) > 0 then
-  for i := High(CanvasFigures) downto Low(CanvasFigures) do
-    with CanvasFigures[i] do
-    begin
-      DeleteObject(Region);
-      SetRegion;
-      if (PtInRegion(Region, APoint.x, APoint.y) = true) then
-      begin
-        case Button of
-          mbLeft:
-            if (CanvasFigures[i].Selected = False) then
-              AddSelection(i);
-					mbRight:
-            if (CanvasFigures[i].Selected = True) then
-              RemoveSelection(i);
-				end;
-				Exit;
-      end
-    end;
+  inherited;
+  if initShift then
+    CanvasFigures[High(CanvasFigures)].PenStyle := psDash;
+end;
+
+procedure TSelectionTool.MouseUp(APoint: TPoint; Button: TMouseButton);
+var i: integer; tempReg, reg: HRGN;
+begin
+  if initCtrl then begin
+    for i := Low(CanvasFigures) to High(CanvasFigures) - 1 do
+      ChangeSelection(i, Button);
+	end
+
+  else if initShift then begin
+    with CanvasFigures[High(CanvasFigures)] do begin
+      DeleteObject(Region); SetRegion;
+      reg := Region;
+		end;
+    if Length(CanvasFigures) > 0 then
+      for i := Low(CanvasFigures) to High(CanvasFigures) - 1 do
+        with CanvasFigures[i] do begin
+          DeleteObject(Region); SetRegion;
+          tempReg := CreateRectRgn(0,0,1,1);
+          if CombineRgn(tempReg, reg, Region, RGN_AND) <> NullRegion then
+            ChangeSelection(i, Button);
+          DeleteObject(tempReg);
+        end;
+  end
+
+  else begin
+    if Length(CanvasFigures) > 0 then
+    for i := High(CanvasFigures) - 1 downto Low(CanvasFigures) do
+      with CanvasFigures[i] do begin
+        DeleteObject(Region); SetRegion;
+        if PtInRegion(Region, APoint.x, APoint.y) then begin
+          ChangeSelection(i, Button);
+          Break;
+        end;
+      end;
+  end;
+
+  inherited;
+end;
+
+procedure TSelectionTool.ChangeSelection(i: integer; Button: TMouseButton);
+begin
+  case Button of
+    mbLeft: if not CanvasFigures[i].Selected then AddSelection(i);
+		mbRight: if CanvasFigures[i].Selected then RemoveSelection(i);
+	end;
 end;
 
 procedure TSelectionTool.AddSelection(figureIndex: integer);
 var p1, p2: TDPoint; width: integer;
 begin
-  CanvasFigures[figureIndex].Selected := True;
   SetLength(SelectionFigures, Length(SelectionFigures) + 1);
   SelectionFigures[High(SelectionFigures)] := TSelection.Create;
-  with SelectionFigures[High(SelectionFigures)] do
-  begin
+  CanvasFigures[figureIndex].Selected := True;
+  with SelectionFigures[High(SelectionFigures)] do begin
     SelectedFigure := figureIndex;
-    with CanvasFigures[SelectedFigure] do
-    begin
+    with CanvasFigures[SelectedFigure] do begin
       p1 := FindTopLeft;
       p2 := FindBottomRight;
       width := PenWidth;
@@ -359,10 +406,28 @@ begin
   AddPenParameters(Panel);
 end;
 
+procedure TPolyLineTool.MouseDown(FPoint: TPoint; Button: TMouseButton; Shift: TShiftState);
+begin
+  if Button = mbLeft then begin
+    if not isDrawing then inherited;
+    AddPoint(FPoint);
+  end
+  else begin
+    with CanvasFigures[High(CanvasFigures)] do
+      SetLength(DPoints, Length(DPoints) - 1);
+    isDrawing := False;
+  end;
+end;
+
 procedure TPolyLineTool.MouseMove(APoint: TPoint);
 begin
   with CanvasFigures[High(CanvasFigures)] do
     DPoints[High(DPoints)] := ScreenToWorld(APoint);
+end;
+
+procedure TPolyLineTool.MouseUp(APoint: TPoint; Button: TMouseButton);
+begin
+
 end;
 
 procedure TPolyLineTool.CreateParameters(APanel: TPanel);
@@ -375,8 +440,7 @@ procedure RegisterTool(ATool: TTool; AFigureClass: TFigureClass; BMPSorce: Strin
 begin
   SetLength(ToolsRegister, Length(ToolsRegister) + 1);
   ToolsRegister[High(ToolsRegister)] := ATool;
-  with ToolsRegister[High(ToolsRegister)] do
-  begin
+  with ToolsRegister[High(ToolsRegister)] do begin
     FigureClass := AFigureClass;
     Bitmap := TBitmap.Create;
     Bitmap.LoadFromFile(BMPSorce);

@@ -73,32 +73,14 @@ end;
 procedure TMainForm.PaintBoxMouseDown(Sender: TObject; Button: TMouseButton;
   Shift: TShiftState; X, Y: integer);
 begin
-  if Button = mbLeft then
-  begin
-    if not isDrawingPolyLine then
-    begin
-      currentTool.MouseDown(Point(X, Y));
-      isDrawing := True;
-      if currentTool is TPolyLineTool then
-        isDrawingPolyLine := True;
-    end;
-    if isDrawingPolyLine then
-      currentTool.AddPoint(Point(X, Y));
-  end
-  else if (Button = mbRight) and (isDrawingPolyLine) then
-  begin
-    with CanvasFigures[High(CanvasFigures)] do
-      SetLength(DPoints, Length(DPoints) - 1);
-    isDrawingPolyLine := False;
-    isDrawing := False;
-  end;
+  currentTool.MouseDown(Point(X, Y), Button, Shift);
   PaintBox.Invalidate;
 end;
 
 procedure TMainForm.PaintBoxMouseMove(Sender: TObject; Shift: TShiftState;
   X, Y: integer);
 begin
-  if isDrawing then
+  if currentTool.isDrawing then
     currentTool.MouseMove(Point(X, Y));
   SetScrollBars;
   PaintBox.Invalidate;
@@ -108,8 +90,6 @@ procedure TMainForm.PaintBoxMouseUp(Sender: TObject; Button: TMouseButton;
   Shift: TShiftState; X, Y: integer);
 begin
   currentTool.MouseUp(Point(X, Y), Button);
-  if (not isDrawingPolyLine) then
-    isDrawing := False;
 	ScaleSpin.Value := Scale * 100;
   SetScrollBars;
   PaintBox.Invalidate;
@@ -254,7 +234,7 @@ begin
   begin
     j := 0;
     for i := Low(CanvasFigures) to High(CanvasFigures) do
-      if (CanvasFigures[i].Selected = True) then
+      if CanvasFigures[i].Selected then
       begin
         (currentTool as TSelectionTool).RemoveSelection(i);
         CanvasFigures[i].Free;
