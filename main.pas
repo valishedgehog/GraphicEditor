@@ -10,7 +10,7 @@ uses
 
 type
 
-	{ TMainForm }
+  { TMainForm }
 
   TMainForm = class(TForm)
     MEdit: TMenuItem;
@@ -100,8 +100,8 @@ end;
 procedure TMainForm.PaintBoxMouseWheel(Sender: TObject; Shift: TShiftState;
   WheelDelta: Integer; MousePos: TPoint; var Handled: Boolean);
 begin
-  if WheelDelta > 0 then ZoomPoint(MousePos, Scale + 0.5)
-  else ZoomPoint(MousePos, Scale - 0.5);
+  if WheelDelta > 0 then ZoomPoint(MousePos, Scale + 0.2)
+  else ZoomPoint(MousePos, Scale - 0.2);
   ScaleSpin.Value := Scale * 100;
   SetScrollBars;
   PaintBox.Invalidate;
@@ -109,15 +109,30 @@ end;
 
 procedure TMainForm.PaintBoxPaint(Sender: TObject);
 var
-  element: TFigureBase;
+  element: TFigureBase; p1, p2: TPoint; w: integer;
 begin
   with PaintBox do begin
     Canvas.Brush.Color := clWhite;
     Canvas.FillRect(0, 0, Width, Height);
     for element in CanvasFigures do
       element.Draw(Canvas);
-    for element in SelectionFigures do
-      element.Draw(Canvas);
+
+    with Canvas do begin
+      Pen.Width := 1;
+      Pen.Style := psDash;
+      Brush.Style := bsClear;
+      for element in CanvasFigures do
+        if element.Selected then
+          with element do begin
+            p1 := WorldToScreen(FindTopLeft);
+            p2 := WorldToScreen(FindBottomRight);
+            w := element.PenWidth;
+            Frame(
+              p1.x - 5 - w div 2, p1.y - 5 - w div 2,
+              p2.x + 5 + w div 2, p2.y + 5 + w div 2
+            );
+          end;
+    end;
   end;
 end;
 
@@ -227,30 +242,48 @@ end;
 procedure TMainForm.MEditDeleteClick(Sender: TObject);
 var i, j: integer;
 begin
-  if (currentTool is TSelectionTool) and (Length(CanvasFigures) > 0) then begin
-    j := 0;
+  j := 0;
+  if currentTool is TSelectionTool then begin
     for i := Low(CanvasFigures) to High(CanvasFigures) do
-      if CanvasFigures[i].Selected then begin
-        (currentTool as TSelectionTool).RemoveSelection(i);
-        CanvasFigures[i].Free;
-      end
+      if CanvasFigures[i].Selected then
+        CanvasFigures[i].Free
       else begin
         CanvasFigures[j] := CanvasFigures[i];
         j := j + 1;
       end;
+    SetLength(CanvasFigures, j);
   end;
-  SetLength(CanvasFigures, j);
   PaintBox.Invalidate;
 end;
 
 procedure TMainForm.MEditDownClick(Sender: TObject);
+var temp: TFigureBase; i: integer;
 begin
   // TODO
+  if (currentTool is TSelectionTool) and (Length(CanvasFigures) > 0) then begin
+    for i := Low(CanvasFigures) + 1 to High(CanvasFigures) do
+      if CanvasFigures[i].Selected then begin
+        temp := CanvasFigures[i];
+        CanvasFigures[i] := CanvasFigures[i-1];
+        CanvasFigures[i-1] := temp;
+      end
+  end;
+  PaintBox.Invalidate;
 end;
 
 procedure TMainForm.MEditUpClick(Sender: TObject);
+var temp: TFigureBase; i: integer;
 begin
   // TODO
+  if currentTool is TSelectionTool then begin
+    for i := Low(CanvasFigures) to High(CanvasFigures) - 1 do
+      if CanvasFigures[i].Selected then begin
+        temp := CanvasFigures[i];
+        CanvasFigures[i] := CanvasFigures[i+1];
+        CanvasFigures[i+1] := temp;
+      end
+  end;
+  PaintBox.Invalidate;
 end;
 
 end.

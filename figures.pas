@@ -32,11 +32,6 @@ type
     procedure Draw(ACanvas: TCanvas); override;
   end;
 
-  TSelection = class(TRectangle)
-    SelectedFigure: integer;
-    constructor Create;
-  end;
-
   TRoundRectangle = class(TFigureBase)
     procedure SetRegion; override;
     procedure Draw(ACanvas: TCanvas); override;
@@ -64,7 +59,6 @@ type
 
 var
   CanvasFigures: TFiguresArray;
-  SelectionFigures: array of TSelection;
 
 implementation
 
@@ -161,20 +155,9 @@ procedure TRectangle.Draw(ACanvas: TCanvas);
 begin
   inherited;
   ACanvas.Rectangle(
-    Points[Low(Points)].x,
-    Points[Low(Points)].y,
-    Points[High(Points)].x,
-    Points[High(Points)].y
+    Points[Low(Points)].x, Points[Low(Points)].y,
+    Points[High(Points)].x, Points[High(Points)].y
   );
-end;
-
-constructor TSelection.Create;
-begin
-  PenWidth := 1;
-  PenStyle := psDash;
-  PenColor := clBlack;
-  BrushColor := clWhite;
-  BrushStyle := bsClear;
 end;
 
 procedure TRoundRectangle.SetRegion;
@@ -192,10 +175,8 @@ procedure TRoundRectangle.Draw(ACanvas: TCanvas);
 begin
   inherited;
   ACanvas.RoundRect(
-    Points[Low(Points)].x,
-    Points[Low(Points)].y,
-    Points[High(Points)].x,
-    Points[High(Points)].y,
+    Points[Low(Points)].x, Points[Low(Points)].y,
+    Points[High(Points)].x, Points[High(Points)].y,
     Rounding, Rounding
   );
 end;
@@ -214,10 +195,8 @@ procedure TEllipse.Draw(ACanvas: TCanvas);
 begin
   inherited;
   ACanvas.Ellipse(
-    Points[Low(Points)].x,
-    Points[Low(Points)].y,
-    Points[High(Points)].x,
-    Points[High(Points)].y
+    Points[Low(Points)].x, Points[Low(Points)].y,
+    Points[High(Points)].x, Points[High(Points)].y
   );
 end;
 
@@ -232,10 +211,7 @@ end;
 procedure TLine.Draw(ACanvas: TCanvas);
 begin
   inherited;
-  ACanvas.Line(
-    Points[High(Points)],
-    Points[Low(Points)]
-  );
+  ACanvas.Line(Points[Low(Points)], Points[High(Points)]);
 end;
 
 procedure TPolyLine.SetRegion;

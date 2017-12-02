@@ -55,8 +55,6 @@ type
     procedure MouseDown(FPoint: TPoint; Button: TMouseButton; Shift: TShiftState); override;
     procedure MouseUp(APoint: TPoint; Button: TMouseButton); override;
     procedure ChangeSelection(i: integer; Button: TMouseButton);
-    procedure AddSelection(figureIndex: integer);
-    procedure RemoveSelection(figureIndex: integer);
     procedure FinishWork; override;
   end;
 
@@ -212,10 +210,8 @@ begin
     PenStyle := psDash;
     BrushStyle := bsClear;
   end;
-  if ssShift in Shift then initShift := True
-  else initShift := False;
-  if ssCtrl in Shift then initCtrl := True
-  else initCtrl := False;
+  initShift := ssShift in Shift;
+  initCtrl := ssCtrl in Shift;
 end;
 
 procedure TActionTool.CreateParameters(APanel: TPanel);
@@ -291,19 +287,17 @@ begin
       DeleteObject(Region); SetRegion;
       reg := Region;
     end;
-    if Length(CanvasFigures) > 0 then
-      for i := Low(CanvasFigures) to High(CanvasFigures) - 1 do
-        with CanvasFigures[i] do begin
-          DeleteObject(Region); SetRegion;
-          tempReg := CreateRectRgn(0,0,1,1);
-          if CombineRgn(tempReg, reg, Region, RGN_AND) <> NullRegion then
-            ChangeSelection(i, Button);
-          DeleteObject(tempReg);
-        end;
+    for i := Low(CanvasFigures) to High(CanvasFigures) - 1 do
+      with CanvasFigures[i] do begin
+        DeleteObject(Region); SetRegion;
+        tempReg := CreateRectRgn(0,0,1,1);
+        if CombineRgn(tempReg, reg, Region, RGN_AND) <> NullRegion then
+          ChangeSelection(i, Button);
+        DeleteObject(tempReg);
+      end;
   end
 
   else begin
-    if Length(CanvasFigures) > 0 then
     for i := High(CanvasFigures) - 1 downto Low(CanvasFigures) do
       with CanvasFigures[i] do begin
         DeleteObject(Region); SetRegion;
@@ -320,43 +314,9 @@ end;
 procedure TSelectionTool.ChangeSelection(i: integer; Button: TMouseButton);
 begin
   case Button of
-    mbLeft: if not CanvasFigures[i].Selected then AddSelection(i);
-    mbRight: if CanvasFigures[i].Selected then RemoveSelection(i);
+    mbLeft: CanvasFigures[i].Selected := True;
+    mbRight: CanvasFigures[i].Selected := False;
   end;
-end;
-
-procedure TSelectionTool.AddSelection(figureIndex: integer);
-var p1, p2: TDPoint; width: integer;
-begin
-  SetLength(SelectionFigures, Length(SelectionFigures) + 1);
-  SelectionFigures[High(SelectionFigures)] := TSelection.Create;
-  CanvasFigures[figureIndex].Selected := True;
-  with CanvasFigures[figureIndex] do begin
-      p1 := FindTopLeft;
-      p2 := FindBottomRight;
-      width := PenWidth;
-  end;
-  with SelectionFigures[High(SelectionFigures)] do begin
-    SelectedFigure := figureIndex;
-    SetLength(DPoints, 2);
-    DPoints[Low(DPoints)] := DPoint(p1.x - 7 - width, p1.y - 7 - width);
-    DPoints[High(DPoints)] := DPoint(p2.x + 7 + width, p2.y + 7 + width);
-  end;
-end;
-
-procedure TSelectionTool.RemoveSelection(figureIndex: integer);
-var i, j: integer;
-begin
-  CanvasFigures[figureIndex].Selected := False;
-  j := 0;
-  for i := Low(SelectionFigures) to High(SelectionFigures) do
-    if (SelectionFigures[i].SelectedFigure = figureIndex) then
-      SelectionFigures[i].Free
-    else begin
-      SelectionFigures[j] := SelectionFigures[i];
-      j := j + 1;
-    end;
-  SetLength(SelectionFigures, j);
 end;
 
 procedure TSelectionTool.FinishWork;
@@ -365,9 +325,6 @@ begin
   inherited;
   for i in CanvasFigures do
     i.Selected := False;
-  for i in SelectionFigures do
-    i.Free;
-  SetLength(SelectionFigures, 0);
 end;
 
 procedure TPenTool.CreateParameters(APanel: TPanel);
