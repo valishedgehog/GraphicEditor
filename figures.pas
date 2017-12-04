@@ -11,9 +11,10 @@ type
 
   PPoint = array[0..3] of TPoint;
 
-  TFigureBase = class
-    DPoints: TDPointsArray;
-    Points: TPointsArray;
+  AnchorPos = (TopLeft, TopRight, BottomLeft, BottomRight, PointPos);
+
+  TFigureBase = class(TObject)
+    Points: TDPointsArray;
     Region: HRGN;
     Selected: Boolean;
     PenStyle: TPenStyle;
@@ -27,22 +28,40 @@ type
     function FindBottomRight: TDPoint;
   end;
 
-  TRectangle = class(TFigureBase)
+  TAnchor = class(TFigureBase)
+    Figure: TFigureBase;
+    Pos: AnchorPos;
+    constructor Create(FPoint: TDPoint; APos: AnchorPos);
+    procedure SetRegion; override;
+    procedure Draw(ACanvas: TCanvas); override;
+	end;
+
+  TAnchorsArray = array of TAnchor;
+
+  TAnchorsFigure = class(TFigureBase)
+    function GetAnchors: TAnchorsArray; virtual;
+	end;
+
+  TAnchorsOnPointsFigure = class(TAnchorsFigure)
+    function GetAnchors: TAnchorsArray; override;
+	end;
+
+  TRectangle = class(TAnchorsFigure)
     procedure SetRegion; override;
     procedure Draw(ACanvas: TCanvas); override;
   end;
 
-  TRoundRectangle = class(TFigureBase)
+  TRoundRectangle = class(TAnchorsFigure)
     procedure SetRegion; override;
     procedure Draw(ACanvas: TCanvas); override;
   end;
 
-  TEllipse = class(TFigureBase)
+  TEllipse = class(TAnchorsFigure)
     procedure SetRegion; override;
     procedure Draw(ACanvas: TCanvas); override;
   end;
 
-  TLine = class(TFigureBase)
+  TLine = class(TAnchorsOnPointsFigure)
     procedure SetRegion; override;
     procedure Draw(ACanvas: TCanvas); override;
   end;
@@ -57,8 +76,14 @@ type
 
   function RectAroundLine(P1, P2: TPoint; Width: Integer): PPoint;
 
+const
+  SELECTION_PADDING = 5;
+  ANCHOR_PADDING = 4;
+  LINERECT_PADDING = 10;
+
 var
   CanvasFigures: TFiguresArray;
+  AnchorsFigures: TAnchorsArray;
 
 implementation
 
@@ -73,23 +98,23 @@ begin
 
   if (P1.y > P2.y) then
   begin
-    Result[0] := Point(P1.x - Width - 5, P1.y);
-    Result[1] := Point(P1.x, P1.y + Width + 5);
-    Result[2] := Point(P2.x + Width + 5, P2.y);
-    Result[3] := Point(P2.x, P2.y - Width - 5);
+    Result[0] := Point(P1.x - Width - LINERECT_PADDING, P1.y);
+    Result[1] := Point(P1.x, P1.y + Width + LINERECT_PADDING);
+    Result[2] := Point(P2.x + Width + LINERECT_PADDING, P2.y);
+    Result[3] := Point(P2.x, P2.y - Width - LINERECT_PADDING);
   end
   else begin
-    Result[0] := Point(P1.x - Width - 5, P1.y);
-    Result[1] := Point(P1.x, P1.y - Width - 5);
-    Result[2] := Point(P2.x + Width + 5, P2.y);
-    Result[3] := Point(P2.x, P2.y + Width + 5);
+    Result[0] := Point(P1.x - Width - LINERECT_PADDING, P1.y);
+    Result[1] := Point(P1.x, P1.y - Width - LINERECT_PADDING);
+    Result[2] := Point(P2.x + Width + LINERECT_PADDING, P2.y);
+    Result[3] := Point(P2.x, P2.y + Width + LINERECT_PADDING);
   end;
 end;
 
 constructor TFigureBase.Create(FPoint: TDPoint);
 begin
-  SetLength(DPoints, Length(DPoints) + 1);
-  DPoints[High(DPoints)] := FPoint;
+  SetLength(Points, Length(Points) + 1);
+  Points[High(Points)] := FPoint;
 
   PenStyle := INIT_PEN_STYLE;
   BrushStyle := INIT_BRUSH_STYLE;
@@ -100,7 +125,6 @@ begin
 end;
 
 procedure TFigureBase.Draw(ACanvas: TCanvas);
-var i: integer;
 begin
   with ACanvas do
   begin
@@ -110,16 +134,13 @@ begin
     Brush.Color := BrushColor;
     Brush.Style := BrushStyle;
   end;
-  SetLength(Points, Length(DPoints));
-  for i := Low(DPoints) to High(DPoints) do
-    Points[i] := WorldToScreen(DPoints[i]);
 end;
 
 function TFigureBase.FindTopLeft: TDPoint;
 var i: TDPoint;
 begin
-  Result := DPoints[Low(DPoints)];
-  for i in DPoints do
+  Result := Points[Low(Points)];
+  for i in Points do
   begin
     if (i.x < Result.x) then
       Result.x := i.x;
@@ -131,8 +152,8 @@ end;
 function TFigureBase.FindBottomRight: TDPoint;
 var i: TDPoint;
 begin
-  Result := DPoints[Low(Points)];
-  for i in DPoints do
+  Result := Points[Low(Points)];
+  for i in Points do
   begin
     if (i.x > Result.x) then
       Result.x := i.x;
@@ -141,13 +162,85 @@ begin
   end;
 end;
 
+constructor TAnchor.Create(FPoint: TDPoint; APos: AnchorPos);
+begin
+  SetLength(Points, Length(Points) + 1);
+  Points[High(Points)] := FPoint;
+  PenWidth := 1;
+  PenColor := clBlack;
+  PenStyle := psSolid;
+  BrushColor := clRed;
+  BrushStyle := bsSolid;
+  Pos := APos;
+end;
+
+procedure TAnchor.SetRegion;
+begin
+  with WorldToScreen(Points[Low(Points)]) do
+  Region := CreateRectRgn(
+    x - ANCHOR_PADDING, y - ANCHOR_PADDING,
+    x + ANCHOR_PADDING, y + ANCHOR_PADDING
+  );
+end;
+
+procedure TAnchor.Draw(ACanvas: TCanvas);
+var tx, ty: integer;
+begin
+  inherited;
+  with WorldToScreen(Points[Low(Points)]) do
+    case Pos of
+      TopLeft: begin
+        tx := x - SELECTION_PADDING;
+        ty := y - SELECTION_PADDING;
+			end;
+      TopRight: begin
+        tx := x + SELECTION_PADDING;
+        ty := y - SELECTION_PADDING;
+			end;
+      BottomLeft: begin
+        tx := x - SELECTION_PADDING;
+        ty := y + SELECTION_PADDING;
+			end;
+      BottomRight: begin
+        tx := x + SELECTION_PADDING;
+        ty := y + SELECTION_PADDING;
+			end;
+      PointPos: begin
+        tx := x; ty := y;
+			end;
+		end;
+	ACanvas.Rectangle(
+    tx - ANCHOR_PADDING, ty - ANCHOR_PADDING,
+    tx + ANCHOR_PADDING, ty + ANCHOR_PADDING
+  );
+end;
+
+function TAnchorsFigure.GetAnchors: TAnchorsArray;
+var p1, p2: TDPoint;
+begin
+  SetLength(Result, 4);
+	p1 := FindTopLeft; p2 := FindBottomRight;
+  Result[0] := TAnchor.Create(p1, TopLeft);
+  Result[1] := TAnchor.Create(DPoint(p2.x, p1.y), TopRight);
+  Result[2] := TAnchor.Create(DPoint(p1.x, p2.y), BottomLeft);
+  Result[3] := TAnchor.Create(p2, BottomRight);
+end;
+
+function TAnchorsOnPointsFigure.GetAnchors: TAnchorsArray;
+var i: integer;
+begin
+  SetLength(Result, Length(Points));
+  for i := Low(Points) to High(Points) do
+    Result[i] := TAnchor.Create(Points[i], PointPos);
+end;
+
 procedure TRectangle.SetRegion;
 begin
   Region := CreateRectRgn(
-    WorldToScreen(DPoints[Low(DPoints)]).x - PenWidth div 2,
-    WorldToScreen(DPoints[Low(DPoints)]).y - PenWidth div 2,
-    WorldToScreen(DPoints[High(DPoints)]).x + PenWidth div 2,
-    WorldToScreen(DPoints[High(DPoints)]).y + PenWidth div 2
+    WorldToScreen(Points[Low(Points)]).x - PenWidth div 2,
+    WorldToScreen(Points[Low(Points)]).y - PenWidth div 2,
+    WorldToScreen(Points[High(Points)]).x + PenWidth div 2,
+    WorldToScreen(Points[High(Points)]).y + PenWidth div 2
   );
 end;
 
@@ -155,18 +248,20 @@ procedure TRectangle.Draw(ACanvas: TCanvas);
 begin
   inherited;
   ACanvas.Rectangle(
-    Points[Low(Points)].x, Points[Low(Points)].y,
-    Points[High(Points)].x, Points[High(Points)].y
+    WorldToScreen(Points[Low(Points)]).x,
+    WorldToScreen(Points[Low(Points)]).y,
+    WorldToScreen(Points[High(Points)]).x,
+    WorldToScreen(Points[High(Points)]).y
   );
 end;
 
 procedure TRoundRectangle.SetRegion;
 begin
   Region := CreateRoundRectRgn(
-    WorldToScreen(DPoints[Low(DPoints)]).x - PenWidth div 2,
-    WorldToScreen(DPoints[Low(DPoints)]).y - PenWidth div 2,
-    WorldToScreen(DPoints[High(DPoints)]).x + PenWidth div 2,
-    WorldToScreen(DPoints[High(DPoints)]).y + PenWidth div 2,
+    WorldToScreen(Points[Low(Points)]).x - PenWidth div 2,
+    WorldToScreen(Points[Low(Points)]).y - PenWidth div 2,
+    WorldToScreen(Points[High(Points)]).x + PenWidth div 2,
+    WorldToScreen(Points[High(Points)]).y + PenWidth div 2,
     Rounding, Rounding
   );
 end;
@@ -175,8 +270,10 @@ procedure TRoundRectangle.Draw(ACanvas: TCanvas);
 begin
   inherited;
   ACanvas.RoundRect(
-    Points[Low(Points)].x, Points[Low(Points)].y,
-    Points[High(Points)].x, Points[High(Points)].y,
+    WorldToScreen(Points[Low(Points)]).x,
+    WorldToScreen(Points[Low(Points)]).y,
+    WorldToScreen(Points[High(Points)]).x,
+    WorldToScreen(Points[High(Points)]).y,
     Rounding, Rounding
   );
 end;
@@ -184,10 +281,10 @@ end;
 procedure TEllipse.SetRegion;
 begin
   Region := CreateEllipticRgn(
-    WorldToScreen(DPoints[Low(DPoints)]).x - PenWidth div 2,
-    WorldToScreen(DPoints[Low(DPoints)]).y - PenWidth div 2,
-    WorldToScreen(DPoints[High(DPoints)]).x + PenWidth div 2,
-    WorldToScreen(DPoints[High(DPoints)]).y + PenWidth div 2
+    WorldToScreen(Points[Low(Points)]).x - PenWidth div 2,
+    WorldToScreen(Points[Low(Points)]).y - PenWidth div 2,
+    WorldToScreen(Points[High(Points)]).x + PenWidth div 2,
+    WorldToScreen(Points[High(Points)]).y + PenWidth div 2
   );
 end;
 
@@ -195,23 +292,28 @@ procedure TEllipse.Draw(ACanvas: TCanvas);
 begin
   inherited;
   ACanvas.Ellipse(
-    Points[Low(Points)].x, Points[Low(Points)].y,
-    Points[High(Points)].x, Points[High(Points)].y
+    WorldToScreen(Points[Low(Points)]).x,
+    WorldToScreen(Points[Low(Points)]).y,
+    WorldToScreen(Points[High(Points)]).x,
+    WorldToScreen(Points[High(Points)]).y
   );
 end;
 
 procedure TLine.SetRegion;
 var TempPoints: PPoint;
 begin
-  TempPoints := RectAroundLine(WorldToScreen(DPoints[Low(DPoints)]),
-    WorldToScreen(DPoints[High(DPoints)]), PenWidth);
+  TempPoints := RectAroundLine(WorldToScreen(Points[Low(Points)]),
+    WorldToScreen(Points[High(Points)]), PenWidth);
   Region := CreatePolygonRgn(TempPoints, Length(TempPoints), WINDING);
 end;
 
 procedure TLine.Draw(ACanvas: TCanvas);
 begin
   inherited;
-  ACanvas.Line(Points[Low(Points)], Points[High(Points)]);
+  ACanvas.Line(
+    WorldToScreen(Points[Low(Points)]),
+    WorldToScreen(Points[High(Points)])
+  );
 end;
 
 procedure TPolyLine.SetRegion;
@@ -220,12 +322,12 @@ var
   TempPoints: PPoint;
   i : integer;
 begin
-  for i := Low(DPoints) to High(DPoints) - 1 do
+  for i := Low(Points) to High(Points) - 1 do
   begin
-    TempPoints := RectAroundLine(WorldToScreen(DPoints[i]),
-      WorldToScreen(DPoints[i+1]), PenWidth);
+    TempPoints := RectAroundLine(WorldToScreen(Points[i]),
+      WorldToScreen(Points[i+1]), PenWidth);
     TempRegion := CreatePolygonRgn(TempPoints, Length(TempPoints), WINDING);
-    if (i = Low(DPoints)) then
+    if (i = Low(Points)) then
       Region := TempRegion
     else begin
       CombineRgn(Region, Region, TempRegion, RGN_OR);
@@ -235,9 +337,13 @@ begin
 end;
 
 procedure TPolyLine.Draw(ACanvas: TCanvas);
+var ScreenPoints: TPointsArray; i: integer;
 begin
   inherited;
-  ACanvas.Polyline(Points);
+  SetLength(ScreenPoints, Length(Points));
+  for i := Low(ScreenPoints) to High(ScreenPoints) do
+    ScreenPoints[i] := WorldToScreen(Points[i]);
+  ACanvas.Polyline(ScreenPoints);
 end;
 
 end.

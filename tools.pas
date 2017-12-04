@@ -5,7 +5,7 @@ unit tools;
 interface
 
 uses
-  Classes, SysUtils, Graphics, ExtCtrls, Controls, LCLIntf, LCLType, math, figures, parameters, transform, Dialogs;
+  Classes, SysUtils, Graphics, ExtCtrls, Controls, LCLIntf, LCLType, math, figures, parameters, transform;
 
 type
 
@@ -55,6 +55,8 @@ type
     procedure MouseDown(FPoint: TPoint; Button: TMouseButton; Shift: TShiftState); override;
     procedure MouseUp(APoint: TPoint; Button: TMouseButton); override;
     procedure ChangeSelection(i: integer; Button: TMouseButton);
+    procedure AddAnchors(figure: TFigureBase);
+    procedure RemoveAnchors(figure: TFigureBase);
     procedure FinishWork; override;
   end;
 
@@ -141,8 +143,8 @@ end;
 procedure TTool.AddPoint(APoint: TPoint);
 begin
   with CanvasFigures[High(CanvasFigures)] do begin
-    SetLength(DPoints, Length(DPoints) + 1);
-    DPoints[High(DPoints)] := ScreenToWorld(APoint);
+    SetLength(Points, Length(Points) + 1);
+    Points[High(Points)] := ScreenToWorld(APoint);
   end;
 end;
 
@@ -197,8 +199,8 @@ end;
 procedure TTwoPointTool.AddPoint(APoint: TPoint);
 begin
   with CanvasFigures[High(CanvasFigures)] do begin
-    SetLength(DPoints, 2);
-    DPoints[High(DPoints)] := ScreenToWorld(APoint);
+    SetLength(Points, 2);
+    Points[High(Points)] := ScreenToWorld(APoint);
   end;
 end;
 
@@ -236,8 +238,8 @@ procedure THandTool.MouseMove(APoint: TPoint);
 begin
   inherited;
   with CanvasFigures[High(CanvasFigures)] do begin
-    Offset.x := Offset.x + DPoints[Low(DPoints)].x - DPoints[High(DPoints)].x;
-    Offset.y := Offset.y + DPoints[Low(DPoints)].y - DPoints[High(DPoints)].y;
+    Offset.x := Offset.x + Points[Low(Points)].x - Points[High(Points)].x;
+    Offset.y := Offset.y + Points[Low(Points)].y - Points[High(Points)].y;
   end;
 end;
 
@@ -314,17 +316,53 @@ end;
 procedure TSelectionTool.ChangeSelection(i: integer; Button: TMouseButton);
 begin
   case Button of
-    mbLeft: CanvasFigures[i].Selected := True;
-    mbRight: CanvasFigures[i].Selected := False;
+    mbLeft: if not CanvasFigures[i].Selected then begin
+      CanvasFigures[i].Selected := True;
+      if CanvasFigures[i] is TAnchorsFigure then
+        AddAnchors(CanvasFigures[i]);
+		end;
+		mbRight: if CanvasFigures[i].Selected then begin
+      CanvasFigures[i].Selected := False;
+      if CanvasFigures[i] is TAnchorsFigure then
+        RemoveAnchors(CanvasFigures[i]);
+    end;
   end;
+end;
+
+procedure TSelectionTool.AddAnchors(figure: TFigureBase);
+var TempAnchors: TAnchorsArray; i: integer;
+begin
+  with figure as TAnchorsFigure do begin
+    TempAnchors := GetAnchors;
+    for i := Low(TempAnchors) to High(TempAnchors) do begin
+      SetLength(AnchorsFigures, Length(AnchorsFigures) + 1);
+      AnchorsFigures[High(AnchorsFigures)] := TempAnchors[i];
+      AnchorsFigures[High(AnchorsFigures)].Figure := figure;
+    end;
+	end;
+end;
+
+procedure TSelectionTool.RemoveAnchors(figure: TFigureBase);
+var i, j: integer;
+begin
+  j := 0;
+  for i := Low(AnchorsFigures) to High(AnchorsFigures) do
+  if AnchorsFigures[i].Figure = figure then
+    AnchorsFigures[i].Free
+  else begin
+    AnchorsFigures[j] := AnchorsFigures[i];
+    j := j + 1;
+  end;
+  SetLength(AnchorsFigures, j);
 end;
 
 procedure TSelectionTool.FinishWork;
 var i: TFigureBase;
 begin
   inherited;
-  for i in CanvasFigures do
-    i.Selected := False;
+  for i in CanvasFigures do i.Selected := False;
+  for i in AnchorsFigures do i.Free;
+  SetLength(AnchorsFigures, 0);
 end;
 
 procedure TPenTool.CreateParameters(APanel: TPanel);
@@ -371,7 +409,7 @@ begin
   end
   else begin
     with CanvasFigures[High(CanvasFigures)] do
-      SetLength(DPoints, Length(DPoints) - 1);
+      SetLength(Points, Length(Points) - 1);
     isDrawing := False;
   end;
 end;
@@ -379,7 +417,7 @@ end;
 procedure TPolyLineTool.MouseMove(APoint: TPoint);
 begin
   with CanvasFigures[High(CanvasFigures)] do
-    DPoints[High(DPoints)] := ScreenToWorld(APoint);
+    Points[High(Points)] := ScreenToWorld(APoint);
 end;
 
 procedure TPolyLineTool.MouseUp(APoint: TPoint; Button: TMouseButton);

@@ -108,32 +108,32 @@ begin
 end;
 
 procedure TMainForm.PaintBoxPaint(Sender: TObject);
-var
-  element: TFigureBase; p1, p2: TPoint; w: integer;
+var element: TFigureBase; p1, p2: TPoint; w: integer;
 begin
-  with PaintBox do begin
-    Canvas.Brush.Color := clWhite;
-    Canvas.FillRect(0, 0, Width, Height);
-    for element in CanvasFigures do
-      element.Draw(Canvas);
+  PaintBox.Canvas.Brush.Color := clWhite;
+  PaintBox.Canvas.FillRect(0, 0, Width, Height);
+  for element in CanvasFigures do
+    element.Draw(PaintBox.Canvas);
 
-    with Canvas do begin
-      Pen.Width := 1;
-      Pen.Style := psDash;
-      Brush.Style := bsClear;
-      for element in CanvasFigures do
-        if element.Selected then
-          with element do begin
-            p1 := WorldToScreen(FindTopLeft);
-            p2 := WorldToScreen(FindBottomRight);
-            w := element.PenWidth;
-            Frame(
-              p1.x - 5 - w div 2, p1.y - 5 - w div 2,
-              p2.x + 5 + w div 2, p2.y + 5 + w div 2
-            );
-          end;
-    end;
+  with PaintBox.Canvas do begin
+    Pen.Width := 1;
+    Pen.Style := psDash;
+    Brush.Style := bsClear;
+    for element in CanvasFigures do
+      if element.Selected then
+        with element do begin
+          p1 := WorldToScreen(FindTopLeft);
+          p2 := WorldToScreen(FindBottomRight);
+          w := element.PenWidth;
+          Frame(
+            p1.x - SELECTION_PADDING - w div 2, p1.y - SELECTION_PADDING - w div 2,
+            p2.x + SELECTION_PADDING + w div 2, p2.y + SELECTION_PADDING + w div 2
+          );
+        end;
   end;
+
+  for element in AnchorsFigures do
+    element.Draw(PaintBox.Canvas);
 end;
 
 procedure TMainForm.OnClickTool(Sender: TObject);
@@ -245,9 +245,10 @@ begin
   j := 0;
   if currentTool is TSelectionTool then begin
     for i := Low(CanvasFigures) to High(CanvasFigures) do
-      if CanvasFigures[i].Selected then
-        CanvasFigures[i].Free
-      else begin
+      if CanvasFigures[i].Selected then begin
+        (currentTool as TSelectionTool).RemoveAnchors(CanvasFigures[i]);
+        CanvasFigures[i].Free;
+      end else begin
         CanvasFigures[j] := CanvasFigures[i];
         j := j + 1;
       end;
