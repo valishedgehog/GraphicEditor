@@ -36,6 +36,8 @@ type
     procedure MouseDown(FPoint: TPoint; Button: TMouseButton; Shift: TShiftState); override;
     procedure MouseUp(APoint: TPoint; Button: TMouseButton); override;
     procedure CreateParameters(APanel: TPanel); override;
+    procedure AddAnchors(figure: TFigureBase);
+    procedure RemoveAnchors(figure: TFigureBase);
   end;
 
   TInvisibleActionTool = class(TActionTool)
@@ -54,8 +56,6 @@ type
     procedure MouseDown(FPoint: TPoint; Button: TMouseButton; Shift: TShiftState); override;
     procedure MouseUp(APoint: TPoint; Button: TMouseButton); override;
     procedure ChangeSelection(i: integer; Button: TMouseButton);
-    procedure AddAnchors(figure: TFigureBase);
-    procedure RemoveAnchors(figure: TFigureBase);
   end;
 
   TMoveTool = class(TInvisibleActionTool)
@@ -223,6 +223,33 @@ begin
   inherited;
 end;
 
+procedure TActionTool.AddAnchors(figure: TFigureBase);
+var TempAnchors: TAnchorsArray; i: integer;
+begin
+  with figure as TAnchorsFigure do begin
+    TempAnchors := GetAnchors;
+    for i := Low(TempAnchors) to High(TempAnchors) do begin
+      SetLength(AnchorsFigures, Length(AnchorsFigures) + 1);
+      AnchorsFigures[High(AnchorsFigures)] := TempAnchors[i];
+      AnchorsFigures[High(AnchorsFigures)].Figure := figure;
+    end;
+	end;
+end;
+
+procedure TActionTool.RemoveAnchors(figure: TFigureBase);
+var i, j: integer;
+begin
+  j := 0;
+  for i := Low(AnchorsFigures) to High(AnchorsFigures) do
+  if AnchorsFigures[i].Figure = figure then
+    AnchorsFigures[i].Free
+  else begin
+    AnchorsFigures[j] := AnchorsFigures[i];
+    j := j + 1;
+  end;
+  SetLength(AnchorsFigures, j);
+end;
+
 procedure TInvisibleActionTool.MouseDown(FPoint: TPoint; Button: TMouseButton; Shift: TShiftState);
 begin
   inherited;
@@ -322,33 +349,6 @@ begin
         RemoveAnchors(CanvasFigures[i]);
     end;
   end;
-end;
-
-procedure TSelectionTool.AddAnchors(figure: TFigureBase);
-var TempAnchors: TAnchorsArray; i: integer;
-begin
-  with figure as TAnchorsFigure do begin
-    TempAnchors := GetAnchors;
-    for i := Low(TempAnchors) to High(TempAnchors) do begin
-      SetLength(AnchorsFigures, Length(AnchorsFigures) + 1);
-      AnchorsFigures[High(AnchorsFigures)] := TempAnchors[i];
-      AnchorsFigures[High(AnchorsFigures)].Figure := figure;
-    end;
-	end;
-end;
-
-procedure TSelectionTool.RemoveAnchors(figure: TFigureBase);
-var i, j: integer;
-begin
-  j := 0;
-  for i := Low(AnchorsFigures) to High(AnchorsFigures) do
-  if AnchorsFigures[i].Figure = figure then
-    AnchorsFigures[i].Free
-  else begin
-    AnchorsFigures[j] := AnchorsFigures[i];
-    j := j + 1;
-  end;
-  SetLength(AnchorsFigures, j);
 end;
 
 procedure TMoveTool.MouseDown(FPoint: TPoint; Button: TMouseButton; Shift: TShiftState);

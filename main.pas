@@ -251,10 +251,10 @@ procedure TMainForm.MEditDeleteClick(Sender: TObject);
 var i, j: integer;
 begin
   j := 0;
-  if currentTool is TSelectionTool then begin
+  if currentTool is TActionTool then begin
     for i := Low(CanvasFigures) to High(CanvasFigures) do
       if CanvasFigures[i].Selected then begin
-        (currentTool as TSelectionTool).RemoveAnchors(CanvasFigures[i]);
+        (currentTool as TActionTool).RemoveAnchors(CanvasFigures[i]);
         CanvasFigures[i].Free;
       end else begin
         CanvasFigures[j] := CanvasFigures[i];
