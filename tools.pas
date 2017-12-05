@@ -58,6 +58,13 @@ type
     procedure RemoveAnchors(figure: TFigureBase);
   end;
 
+  TMoveTool = class(TInvisibleActionTool)
+    prevPoint, newPoint: TDPoint;
+    procedure MouseDown(FPoint: TPoint; Button: TMouseButton; Shift: TShiftState); override;
+    procedure MouseMove(APoint: TPoint); override;
+    procedure MouseUp(APoint: TPoint; Button: TMouseButton); override;
+	end;
+
   TPenTool = class(TTool)
     procedure CreateParameters(APanel: TPanel); override;
   end;
@@ -344,6 +351,46 @@ begin
   SetLength(AnchorsFigures, j);
 end;
 
+procedure TMoveTool.MouseDown(FPoint: TPoint; Button: TMouseButton; Shift: TShiftState);
+var i: TFigureBase;
+begin
+  for i in CanvasFigures do
+    with i do begin
+      DeleteObject(Region); SetRegion;
+      if Selected and PtInRegion(Region, FPoint.x, FPoint.y) then begin
+        isDrawing := True;
+        break;
+			end;
+		end;
+	newPoint := ScreenToWorld(FPoint);
+end;
+
+procedure TMoveTool.MouseMove(APoint: TPoint);
+var i: TFigureBase; p: integer; dx, dy: double;
+begin
+  prevPoint := newPoint;
+  newPoint := ScreenToWorld(APoint);
+  dx := newPoint.x - prevPoint.x;
+  dy := newPoint.y - prevPoint.y;
+
+  for i in CanvasFigures do
+    if i.Selected then
+      for p := Low(i.Points) to High(i.Points) do begin
+        i.Points[p].x := i.Points[p].x + dx;
+        i.Points[p].y := i.Points[p].y + dy;
+			end;
+
+  for i in AnchorsFigures do begin
+    i.Points[0].x := i.Points[0].x + dx;
+    i.Points[0].y := i.Points[0].y + dy;
+	end;
+end;
+
+procedure TMoveTool.MouseUp(APoint: TPoint; Button: TMouseButton);
+begin
+	isDrawing := False;
+end;
+
 procedure TPenTool.CreateParameters(APanel: TPanel);
 begin
   inherited;
@@ -423,6 +470,7 @@ end;
 
 Initialization
 RegisterTool(TSelectionTool.Create, TRectangle, 'Icons/TSelectionTool.bmp');
+RegisterTool(TMoveTool.Create, TRectangle, 'Icons/TMoveTool.bmp');
 RegisterTool(THandTool.Create, TRectangle, 'Icons/THandTool.bmp');
 RegisterTool(TMagnifierTool.Create, TRectangle, 'Icons/TMagnifierTool.bmp');
 RegisterTool(TPenTool.Create, TPolyLine, 'Icons/TPenTool.bmp');
