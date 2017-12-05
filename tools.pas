@@ -22,7 +22,6 @@ type
     procedure AddPoint(APoint: TPoint); virtual;
     procedure CreateParameters(APanel: TPanel); virtual;
     procedure ShowParameters;
-    procedure FinishWork; virtual;
     procedure DestroyFigure;
     procedure AddPenParameters(APanel: TPanel);
     procedure AddBrushParameters(APanel: TPanel);
@@ -35,12 +34,12 @@ type
   TActionTool = class(TTwoPointTool)
     initShift, initCtrl: Boolean;
     procedure MouseDown(FPoint: TPoint; Button: TMouseButton; Shift: TShiftState); override;
+    procedure MouseUp(APoint: TPoint; Button: TMouseButton); override;
     procedure CreateParameters(APanel: TPanel); override;
   end;
 
   TInvisibleActionTool = class(TActionTool)
     procedure MouseDown(FPoint: TPoint; Button: TMouseButton; Shift: TShiftState); override;
-    procedure MouseUp(APoint: TPoint; Button: TMouseButton); override;
   end;
 
   THandTool = class(TInvisibleActionTool)
@@ -51,13 +50,12 @@ type
     procedure MouseUp(APoint: TPoint; Button: TMouseButton); override;
   end;
 
-  TSelectionTool = class(TInvisibleActionTool)
+  TSelectionTool = class(TActionTool)
     procedure MouseDown(FPoint: TPoint; Button: TMouseButton; Shift: TShiftState); override;
     procedure MouseUp(APoint: TPoint; Button: TMouseButton); override;
     procedure ChangeSelection(i: integer; Button: TMouseButton);
     procedure AddAnchors(figure: TFigureBase);
     procedure RemoveAnchors(figure: TFigureBase);
-    procedure FinishWork; override;
   end;
 
   TPenTool = class(TTool)
@@ -164,15 +162,6 @@ begin
   Panel.Visible := True;
 end;
 
-procedure TTool.FinishWork;
-var i: TParameter;
-begin
-  isDrawing := False;
-  Panel.Visible := False;
-  for i in Params do
-    i.SetParamToInit;
-end;
-
 procedure TTool.DestroyFigure;
 begin
   CanvasFigures[High(CanvasFigures)].Free;
@@ -216,6 +205,12 @@ begin
   initCtrl := ssCtrl in Shift;
 end;
 
+procedure TActionTool.MouseUp(APoint: TPoint; Button: TMouseButton);
+begin
+  inherited;
+  DestroyFigure;
+end;
+
 procedure TActionTool.CreateParameters(APanel: TPanel);
 begin
   inherited;
@@ -226,12 +221,6 @@ begin
   inherited;
   with CanvasFigures[High(CanvasFigures)] do
     PenStyle := psClear;
-end;
-
-procedure TInvisibleActionTool.MouseUp(APoint: TPoint; Button: TMouseButton);
-begin
-  inherited;
-  DestroyFigure;
 end;
 
 procedure THandTool.MouseMove(APoint: TPoint);
@@ -262,11 +251,10 @@ begin
           PBHeight / Scale / (BottomRight.y - TopLeft.y));
         ZoomPoint(WorldToScreen(DPoint((TopLeft.x + BottomRight.x) / 2,
           (TopLeft.y + BottomRight.y) / 2)), NewScale);
-        inherited;
       end;
-    DestroyFigure;
     end;
   end;
+  inherited;
 end;
 
 procedure TSelectionTool.MouseDown(FPoint: TPoint; Button: TMouseButton; Shift: TShiftState);
@@ -354,15 +342,6 @@ begin
     j := j + 1;
   end;
   SetLength(AnchorsFigures, j);
-end;
-
-procedure TSelectionTool.FinishWork;
-var i: TFigureBase;
-begin
-  inherited;
-  for i in CanvasFigures do i.Selected := False;
-  for i in AnchorsFigures do i.Free;
-  SetLength(AnchorsFigures, 0);
 end;
 
 procedure TPenTool.CreateParameters(APanel: TPanel);

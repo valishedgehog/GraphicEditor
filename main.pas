@@ -137,9 +137,17 @@ begin
 end;
 
 procedure TMainForm.OnClickTool(Sender: TObject);
+var nextTool: TTool; i: TFigureBase;
 begin
-  currentTool.FinishWork;
-  currentTool := ToolsRegister[(Sender as TBitBtn).Tag];
+  nextTool := ToolsRegister[(Sender as TBitBtn).Tag];
+  currentTool.isDrawing := False;
+  currentTool.Panel.Visible := False;
+  if (currentTool is TActionTool) and not (nextTool is TActionTool) then begin
+    for i in CanvasFigures do i.Selected := False;
+    for i in AnchorsFigures do i.Free;
+    SetLength(AnchorsFigures, 0);
+	end;
+  currentTool := nextTool;
   currentTool.ShowParameters;
   PaintBox.Invalidate;
 end;
