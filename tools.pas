@@ -71,7 +71,7 @@ type
     procedure MouseDown(FPoint: TPoint; Button: TMouseButton; Shift: TShiftState); override;
     procedure MouseMove(APoint: TPoint); override;
     procedure MouseUp(APoint: TPoint; Button: TMouseButton); override;
-	end;
+  end;
 
   TPenTool = class(TTool)
     procedure CreateFigure(FPoint: TPoint); override;
@@ -235,7 +235,7 @@ procedure TActionTool.CreateParameters(APanel: TPanel);
 begin
   inherited;
   CreateParametersFromList(GetParametersList, Panel, Params);
-  UpdateParameters;
+  UpdateParameters; UpdateParameters;
 end;
 
 procedure TActionTool.UpdateParameters;
@@ -244,8 +244,8 @@ var
   figure: TFigureBase;
   param: TParameter;
   contains: boolean;
-  tempParam, p: String;
-  j, k: integer;
+  sParam: String;
+  i, j, k: integer;
 begin
   for param in Params do
     param.ParamPanel.Visible := False;
@@ -256,14 +256,14 @@ begin
     if figure.Selected then begin
       k := k + 1; j := 0;
       FigureList := figure.GetParametersList;
-      for tempParam in FigureList do begin
+
+      for i := Low(ParamsList) to High(ParamsList) do begin
         contains := False;
-        for p in ParamsList do begin
-          if tempParam = p then contains := True;
-          break;
-        end;
-        if not contains then begin
-          ParamsList[j] := tempParam;
+        for sParam in FigureList do
+          if ParamsList[i] = sParam
+            then contains := True;
+        if contains then begin
+          ParamsList[j] := ParamsList[i];
           j := j + 1;
         end;
       end;
@@ -271,11 +271,11 @@ begin
     end;
 
   if (k > 0) then
-    for p in ParamsList do
-      for param in Params do
-        if (p = param.ParamLabel.Caption) then begin
+    for param in Params do
+      for sParam in ParamsList do
+        if (sParam = param.ParamLabel.Caption) then begin
           param.ParamPanel.Visible := True; break;
-				end;
+        end;
 end;
 
 procedure TActionTool.AddAnchors(figure: TFigureBase);
@@ -288,7 +288,7 @@ begin
       AnchorsFigures[High(AnchorsFigures)] := TempAnchors[i];
       AnchorsFigures[High(AnchorsFigures)].Figure := figure;
     end;
-	end;
+  end;
 end;
 
 procedure TActionTool.RemoveAnchors(figure: TFigureBase);
@@ -359,8 +359,8 @@ begin
       AnchorIndex := i;
       newPoint := ScreenToWorld(FPoint);
       break;
-		end;
-	end;
+    end;
+  end;
 
   if initShift and (Mode = figureMode) then
     CanvasFigures[High(CanvasFigures)].PenStyle := psDash;
@@ -380,7 +380,7 @@ begin
 
       if (Position = PointPos) then MovePoint(dx, dy)
       else ResizeFigure(dx, dy);
-		end;
+    end;
 end;
 
 procedure TSelectionTool.MouseUp(APoint: TPoint; Button: TMouseButton);
@@ -398,7 +398,7 @@ begin
     end;
     Points[0].x := Points[0].x + dx;
     Points[0].y := Points[0].y + dy;
-	end;
+  end;
 end;
 
 procedure TSelectionTool.ResizeFigure(dx, dy: double);
@@ -412,14 +412,14 @@ begin
     with Figure do begin
       if (Points[Low(Points)].x <= Points[High(Points)].x) then begin
         minX := Low(Points); maxX := High(Points);
-  	  end else begin
+      end else begin
         minX := High(Points); maxX := Low(Points);
-  	  end;
+      end;
       if (Points[Low(Points)].y <= Points[High(Points)].y) then begin
         minY := Low(Points); maxY := High(Points);
-  	  end else begin
+      end else begin
         minY := High(Points); maxY := Low(Points);
-  	  end;
+      end;
 
       case Position of
         TopLeft: begin
@@ -428,35 +428,35 @@ begin
           MoveFigurePoint(tPoint, minX, minY, maxX, maxY, dx, dy);
           Points[minX].x := Points[minX].x + dx;
           Points[minY].y := Points[minY].y + dy;
-  		  end;
+  	end;
         TopRight: begin
           tPoint.x := Points[maxX].x + dx;
           tPoint.y := Points[minY].y + dy;
           MoveFigurePoint(tPoint, minX, minY, maxX, maxY, dx, dy);
           Points[maxX].x := Points[maxX].x + dx;
           Points[minY].y := Points[minY].y + dy;
-  		  end;
+  	end;
         BottomLeft: begin
           tPoint.x := Points[minX].x + dx;
           tPoint.y := Points[maxY].y + dy;
           MoveFigurePoint(tPoint, minX, minY, maxX, maxY, dx, dy);
           Points[minX].x := Points[minX].x + dx;
           Points[maxY].y := Points[maxY].y + dy;
-  		  end;
+  	end;
         BottomRight: begin
           tPoint.x := Points[maxX].x + dx;
           tPoint.y := Points[maxY].y + dy;
           MoveFigurePoint(tPoint, minX, minY, maxX, maxY, dx, dy);
           Points[maxX].x := Points[maxX].x + dx;
           Points[maxY].y := Points[maxY].y + dy;
-  		  end;
-  	  end;
+  	end;
+      end;
 
       for i in AnchorsFigures do
         if (i.Figure = Figure) then begin
           if (i.Points[0].x = p.x) then i.Points[0].x := i.Points[0].x + dx;
           if (i.Points[0].y = p.y) then i.Points[0].y := i.Points[0].y + dy;
-  		  end;
+        end;
     end;
   end;
 end;
@@ -516,8 +516,8 @@ begin
       if CanvasFigures[i] is TAnchorsFigure then
         AddAnchors(CanvasFigures[i]);
       UpdateParameters;
-		end;
-		mbRight: if CanvasFigures[i].Selected then begin
+    end;
+    mbRight: if CanvasFigures[i].Selected then begin
       CanvasFigures[i].Selected := False;
       if CanvasFigures[i] is TAnchorsFigure then
         RemoveAnchors(CanvasFigures[i]);
@@ -535,9 +535,9 @@ begin
       if Selected and PtInRegion(Region, FPoint.x, FPoint.y) then begin
         isDrawing := True;
         break;
-			end;
-		end;
-	newPoint := ScreenToWorld(FPoint);
+      end;
+    end;
+  newPoint := ScreenToWorld(FPoint);
 end;
 
 procedure TMoveTool.MouseMove(APoint: TPoint);
@@ -553,17 +553,17 @@ begin
       for p := Low(i.Points) to High(i.Points) do begin
         i.Points[p].x := i.Points[p].x + dx;
         i.Points[p].y := i.Points[p].y + dy;
-			end;
+      end;
 
   for i in AnchorsFigures do begin
     i.Points[0].x := i.Points[0].x + dx;
     i.Points[0].y := i.Points[0].y + dy;
-	end;
+  end;
 end;
 
 procedure TMoveTool.MouseUp(APoint: TPoint; Button: TMouseButton);
 begin
-	isDrawing := False;
+  isDrawing := False;
 end;
 
 procedure TPenTool.CreateFigure(FPoint: TPoint);

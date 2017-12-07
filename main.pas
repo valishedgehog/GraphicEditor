@@ -146,7 +146,7 @@ begin
     for i in CanvasFigures do i.Selected := False;
     for i in AnchorsFigures do i.Free;
     SetLength(AnchorsFigures, 0);
-	end;
+  end;
   currentTool := nextTool;
   currentTool.ShowParameters;
   PaintBox.Invalidate;

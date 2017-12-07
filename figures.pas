@@ -17,10 +17,10 @@ type
     BrushStyle: TBrushStyle;
     PenColor, BrushColor: TColor;
     PenWidth, Rounding: integer;
-    constructor Create(FPoint: TDPoint); virtual;
+    constructor Create(FPoint: TDPoint);
     procedure SetRegion; virtual; abstract;
     procedure Draw(ACanvas: TCanvas); virtual;
-    function GetParametersList: TStringArray; virtual; abstract;
+    function GetParametersList: TStringArray; virtual;
     function FindTopLeft: TDPoint;
     function FindBottomRight: TDPoint;
   end;
@@ -33,19 +33,19 @@ type
     procedure SetRegion; override;
     function GetTempPos: TPoint;
     procedure Draw(ACanvas: TCanvas); override;
-	end;
+  end;
 
   TAnchorsArray = array of TAnchor;
 
   TAnchorsFigure = class(TFigureBase)
     function GetParametersList: TStringArray; override;
     function GetAnchors: TAnchorsArray; virtual;
-	end;
+  end;
 
   TAnchorsOnPointsFigure = class(TAnchorsFigure)
     function GetParametersList: TStringArray; override;
     function GetAnchors: TAnchorsArray; override;
-	end;
+  end;
 
   TRectangle = class(TAnchorsFigure)
     procedure SetRegion; override;
@@ -128,6 +128,11 @@ begin
   end;
 end;
 
+function TFigureBase.GetParametersList: TStringArray;
+begin
+
+end;
+
 function TFigureBase.FindTopLeft: TDPoint;
 var i: TDPoint;
 begin
@@ -178,29 +183,31 @@ begin
 end;
 
 function TAnchor.GetTempPos: TPoint;
+var w: integer;
 begin
+  w := Figure.PenWidth;
   with WorldToScreen(Points[Low(Points)]) do
     case Position of
       TopLeft: begin
-        Result.x := x - SELECTION_PADDING;
-        Result.y := y - SELECTION_PADDING;
-			end;
+        Result.x := x - SELECTION_PADDING - w div 2;
+        Result.y := y - SELECTION_PADDING - w div 2;
+      end;
       TopRight: begin
-        Result.x := x + SELECTION_PADDING;
-        Result.y := y - SELECTION_PADDING;
-			end;
+        Result.x := x + SELECTION_PADDING + w div 2;
+        Result.y := y - SELECTION_PADDING - w div 2;
+      end;
       BottomLeft: begin
-        Result.x := x - SELECTION_PADDING;
-        Result.y := y + SELECTION_PADDING;
-			end;
+        Result.x := x - SELECTION_PADDING - w div 2;
+        Result.y := y + SELECTION_PADDING + w div 2;
+      end;
       BottomRight: begin
-        Result.x := x + SELECTION_PADDING;
-        Result.y := y + SELECTION_PADDING;
-			end;
+        Result.x := x + SELECTION_PADDING + w div 2;
+        Result.y := y + SELECTION_PADDING + w div 2;
+      end;
       PointPos: begin
         Result.x := x; Result.y := y;
-			end;
-		end;
+      end;
+    end;
 end;
 
 procedure TAnchor.Draw(ACanvas: TCanvas);
@@ -208,7 +215,7 @@ var t: TPoint;
 begin
   inherited;
   t := GetTempPos;
-	ACanvas.Rectangle(
+  ACanvas.Rectangle(
     t.x - ANCHOR_PADDING, t.y - ANCHOR_PADDING,
     t.x + ANCHOR_PADDING, t.y + ANCHOR_PADDING
   );
@@ -217,18 +224,18 @@ end;
 function TAnchorsFigure.GetParametersList: TStringArray;
 begin
   SetLength(Result, 5);
-  Result[0] := PEN_WIDTH_LABEL;
-  Result[1] := PEN_STYLE_LABEL;
+  Result[4] := PEN_WIDTH_LABEL;
+  Result[3] := PEN_STYLE_LABEL;
   Result[2] := BRUSH_STYLE_LABEL;
-  Result[3] := PEN_COLOR_LABEL;
-  Result[4] := BRUSH_COLOR_LABEL;
+  Result[1] := PEN_COLOR_LABEL;
+  Result[0] := BRUSH_COLOR_LABEL;
 end;
 
 function TAnchorsFigure.GetAnchors: TAnchorsArray;
 var p1, p2: TDPoint;
 begin
   SetLength(Result, 4);
-	p1 := FindTopLeft; p2 := FindBottomRight;
+  p1 := FindTopLeft; p2 := FindBottomRight;
   Result[0] := TAnchor.Create(p1, TopLeft, 0);
   Result[1] := TAnchor.Create(DPoint(p2.x, p1.y), TopRight, 0);
   Result[2] := TAnchor.Create(DPoint(p1.x, p2.y), BottomLeft, 0);

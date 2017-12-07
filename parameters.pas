@@ -56,7 +56,7 @@ type
   TParamRecord = record
     Name: String;
     ParamClass: TParamClass;
-	end;
+  end;
 
   TParamRecordArray = array of TParamRecord;
 
@@ -135,14 +135,14 @@ begin
   case ParamLabel.Caption of
     PEN_COLOR_LABEL: GPenColor := Param;
     BRUSH_COLOR_LABEL: GBrushColor := Param;
-	end;
+  end;
   ParamControl.Color := Param;
   for i in CanvasFigures do
     if i.Selected then
       case ParamLabel.Caption of
         PEN_COLOR_LABEL: i.PenColor := Param;
         BRUSH_COLOR_LABEL: i.BrushColor := Param;
-			end;
+      end;
   ParamPanel.Parent.Parent.Parent.Parent.Invalidate;
 end;
 
@@ -152,7 +152,7 @@ begin
   case ParamLabel.Caption of
     PEN_COLOR_LABEL: InitValue := GPenColor;
     BRUSH_COLOR_LABEL: InitValue := GBrushColor;
-	end;
+  end;
   ParamControl.Color := InitValue;
   ParamControl.ButtonColor := InitValue;
 end;
@@ -191,14 +191,14 @@ begin
   case ParamLabel.Caption of
     PEN_WIDTH_LABEL: GPenWidth := Param;
     ROUNDING_LABEL: GRounding := Param;
-	end;
+  end;
   for i in CanvasFigures do
     if i.Selected then begin
       case ParamLabel.Caption of
         PEN_WIDTH_LABEL: i.PenWidth := Param;
         ROUNDING_LABEL: i.Rounding := Param;
-			end;
-		end;
+      end;
+    end;
   ParamPanel.Parent.Parent.Parent.Parent.Invalidate;
 end;
 
@@ -208,7 +208,7 @@ begin
   case ParamLabel.Caption of
     PEN_WIDTH_LABEL: InitValue := GPenWidth;
     ROUNDING_LABEL: InitValue := GRounding;
-	end;
+  end;
   ParamControl.Value := InitValue;
   ParamControl.Caption := IntToStr(InitValue);
 end;
@@ -300,12 +300,12 @@ begin
 end;
 
 initialization
+RegisterParam(ROUNDING_LABEL, TIntegerSpinParameter); GRounding := INIT_ROUNDING;
 RegisterParam(PEN_STYLE_LABEL, TPenStyleParameter); GPenStyle := INIT_PEN_STYLE;
 RegisterParam(PEN_WIDTH_LABEL, TIntegerSpinParameter); GPenWidth := INIT_PEN_WIDTH;
 RegisterParam(PEN_COLOR_LABEL, TColorParameter); GPenColor := INIT_PEN_COLOR;
 RegisterParam(BRUSH_STYLE_LABEL, TBrushStyleParameter); GBrushStyle := INIT_BRUSH_STYLE;
 RegisterParam(BRUSH_COLOR_LABEL, TColorParameter); GBrushColor := INIT_BRUSH_COLOR;
-RegisterParam(ROUNDING_LABEL, TIntegerSpinParameter); GRounding := INIT_ROUNDING;
 
 end.
 
