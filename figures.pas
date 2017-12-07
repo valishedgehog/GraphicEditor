@@ -5,14 +5,9 @@ unit figures;
 interface
 
 uses
-  Classes, SysUtils, Graphics, LCLIntf, LCLType, transform, parameters;
+  Classes, SysUtils, Graphics, LCLIntf, LCLType, transform, constants;
 
 type
-
-  PPoint = array[0..3] of TPoint;
-
-  AnchorPos = (TopLeft, TopRight, BottomLeft, BottomRight, PointPos);
-  PolyLineTool = (pen, pline);
 
   TFigureBase = class(TObject)
     Points: TDPointsArray;
@@ -25,6 +20,7 @@ type
     constructor Create(FPoint: TDPoint); virtual;
     procedure SetRegion; virtual; abstract;
     procedure Draw(ACanvas: TCanvas); virtual;
+    function GetParametersList: TStringArray; virtual; abstract;
     function FindTopLeft: TDPoint;
     function FindBottomRight: TDPoint;
   end;
@@ -42,10 +38,12 @@ type
   TAnchorsArray = array of TAnchor;
 
   TAnchorsFigure = class(TFigureBase)
+    function GetParametersList: TStringArray; override;
     function GetAnchors: TAnchorsArray; virtual;
 	end;
 
   TAnchorsOnPointsFigure = class(TAnchorsFigure)
+    function GetParametersList: TStringArray; override;
     function GetAnchors: TAnchorsArray; override;
 	end;
 
@@ -55,6 +53,7 @@ type
   end;
 
   TRoundRectangle = class(TAnchorsFigure)
+    function GetParametersList: TStringArray; override;
     procedure SetRegion; override;
     procedure Draw(ACanvas: TCanvas); override;
   end;
@@ -80,11 +79,6 @@ type
   TFiguresArray = array of TFigureBase;
 
   function RectAroundLine(P1, P2: TPoint; Width: Integer): PPoint;
-
-const
-  SELECTION_PADDING = 5;
-  ANCHOR_PADDING = 4;
-  LINERECT_PADDING = 10;
 
 var
   CanvasFigures: TFiguresArray;
@@ -120,13 +114,6 @@ constructor TFigureBase.Create(FPoint: TDPoint);
 begin
   SetLength(Points, Length(Points) + 1);
   Points[High(Points)] := FPoint;
-
-  PenStyle := INIT_PEN_STYLE;
-  BrushStyle := INIT_BRUSH_STYLE;
-  PenColor := INIT_PEN_COLOR;
-  BrushColor := INIT_BRUSH_COLOR;
-  PenWidth := INIT_PEN_WIDTH;
-  Rounding := INIT_ROUNDING;
 end;
 
 procedure TFigureBase.Draw(ACanvas: TCanvas);
@@ -227,6 +214,16 @@ begin
   );
 end;
 
+function TAnchorsFigure.GetParametersList: TStringArray;
+begin
+  SetLength(Result, 5);
+  Result[0] := PEN_WIDTH_LABEL;
+  Result[1] := PEN_STYLE_LABEL;
+  Result[2] := BRUSH_STYLE_LABEL;
+  Result[3] := PEN_COLOR_LABEL;
+  Result[4] := BRUSH_COLOR_LABEL;
+end;
+
 function TAnchorsFigure.GetAnchors: TAnchorsArray;
 var p1, p2: TDPoint;
 begin
@@ -236,6 +233,14 @@ begin
   Result[1] := TAnchor.Create(DPoint(p2.x, p1.y), TopRight, 0);
   Result[2] := TAnchor.Create(DPoint(p1.x, p2.y), BottomLeft, 0);
   Result[3] := TAnchor.Create(p2, BottomRight, 0);
+end;
+
+function TAnchorsOnPointsFigure.GetParametersList: TStringArray;
+begin
+  SetLength(Result, 3);
+  Result[0] := PEN_WIDTH_LABEL;
+  Result[1] := PEN_STYLE_LABEL;
+  Result[2] := PEN_COLOR_LABEL;
 end;
 
 function TAnchorsOnPointsFigure.GetAnchors: TAnchorsArray;
@@ -265,6 +270,13 @@ begin
     WorldToScreen(Points[High(Points)]).x,
     WorldToScreen(Points[High(Points)]).y
   );
+end;
+
+function TRoundRectangle.GetParametersList: TStringArray;
+begin
+  Result := inherited;
+  SetLength(Result, Length(Result) + 1);
+  Result[High(Result)] := ROUNDING_LABEL;
 end;
 
 procedure TRoundRectangle.SetRegion;

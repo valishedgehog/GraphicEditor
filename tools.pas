@@ -5,11 +5,9 @@ unit tools;
 interface
 
 uses
-  Classes, SysUtils, Graphics, ExtCtrls, Controls, LCLIntf, LCLType, math, figures, parameters, transform, Dialogs;
+  Classes, SysUtils, Graphics, ExtCtrls, Controls, LCLIntf, LCLType, math, figures, parameters, transform, constants;
 
 type
-
-  SelectionMode = (figureMode, anchorMode);
 
   TTool = class
     Bitmap: TBitmap;
@@ -25,8 +23,8 @@ type
     procedure CreateParameters(APanel: TPanel); virtual;
     procedure ShowParameters;
     procedure DestroyFigure;
-    procedure AddPenParameters(APanel: TPanel);
-    procedure AddBrushParameters(APanel: TPanel);
+    procedure AddPenParameters;
+    procedure AddBrushParameters;
   end;
 
   TTwoPointTool = class(TTool)
@@ -38,6 +36,7 @@ type
     procedure MouseDown(FPoint: TPoint; Button: TMouseButton; Shift: TShiftState); override;
     procedure MouseUp(APoint: TPoint; Button: TMouseButton); override;
     procedure CreateParameters(APanel: TPanel); override;
+    procedure UpdateParameters;
     procedure AddAnchors(figure: TFigureBase);
     procedure RemoveAnchors(figure: TFigureBase);
   end;
@@ -104,10 +103,11 @@ type
   end;
 
   TToolClass = class of TTool;
+  TToolArray = array of TTool;
 
 procedure RegisterTool(ATool: TTool; AFigureClass: TFigureClass; BMPSorce: String);
 
-var ToolsRegister: array of TTool;
+var ToolsRegister: TToolArray;
 
 implementation
 
@@ -128,12 +128,12 @@ begin
 
     for p in Params do
     case p.ParamLabel.Caption of
-      PEN_WIDTH_LABEL: PenWidth := (p as TIntegerSpinParameter).Param;
-      PEN_COLOR_LABEL: PenColor := (p as TColorParameter).Param;
-      BRUSH_COLOR_LABEL: BrushColor := (p as TColorParameter).Param;
-      PEN_STYLE_LABEL: PenStyle := (p as TPenStyleParameter).Param;
-      BRUSH_STYLE_LABEL: BrushStyle := (p as TBrushStyleParameter).Param;
-      ROUNDING_LABEL: Rounding := (p as TIntegerSpinParameter).Param;
+      PEN_WIDTH_LABEL: PenWidth := GPenWidth;
+      PEN_COLOR_LABEL: PenColor := GPenColor;
+      BRUSH_COLOR_LABEL: BrushColor := GBrushColor;
+      PEN_STYLE_LABEL: PenStyle := GPenStyle;
+      BRUSH_STYLE_LABEL: BrushStyle := GBrushStyle;
+      ROUNDING_LABEL: Rounding := GRounding;
     end;
   end;
 end;
@@ -176,8 +176,10 @@ begin
 end;
 
 procedure TTool.ShowParameters;
+var i: TParameter;
 begin
   Panel.Visible := True;
+  for i in Params do i.SetParamToInit;
 end;
 
 procedure TTool.DestroyFigure;
@@ -186,21 +188,21 @@ begin
   SetLength(CanvasFigures, Length(CanvasFigures) - 1);
 end;
 
-procedure TTool.AddPenParameters(APanel: TPanel);
+procedure TTool.AddPenParameters;
 var i: integer;
 begin
   i := High(Params); SetLength(Params, Length(Params) + 3);
-  Params[i + 1] := TPenStyleParameter.Create(APanel, PEN_STYLE_LABEL, INIT_PEN_STYLE);
-  Params[i + 2] := TIntegerSpinParameter.Create(APanel, PEN_WIDTH_LABEL, INIT_PEN_WIDTH);
-  Params[i + 3] := TColorParameter.Create(APanel, PEN_COLOR_LABEL, INIT_PEN_COLOR);
+  Params[i + 1] := TPenStyleParameter.Create(Panel, PEN_STYLE_LABEL);
+  Params[i + 2] := TIntegerSpinParameter.Create(Panel, PEN_WIDTH_LABEL);
+  Params[i + 3] := TColorParameter.Create(Panel, PEN_COLOR_LABEL);
 end;
 
-procedure TTool.AddBrushParameters(APanel: TPanel);
+procedure TTool.AddBrushParameters;
 var i: integer;
 begin
   i := High(Params); SetLength(Params, Length(Params) + 2);
-  Params[i + 1] := TBrushStyleParameter.Create(APanel, BRUSH_STYLE_LABEL, INIT_BRUSH_STYLE);
-  Params[i + 2] := TColorParameter.Create(APanel, BRUSH_COLOR_LABEL, INIT_BRUSH_COLOR);
+  Params[i + 1] := TBrushStyleParameter.Create(Panel, BRUSH_STYLE_LABEL);
+  Params[i + 2] := TColorParameter.Create(Panel, BRUSH_COLOR_LABEL);
 end;
 
 procedure TTwoPointTool.AddPoint(APoint: TPoint);
@@ -232,6 +234,48 @@ end;
 procedure TActionTool.CreateParameters(APanel: TPanel);
 begin
   inherited;
+  CreateParametersFromList(GetParametersList, Panel, Params);
+  UpdateParameters;
+end;
+
+procedure TActionTool.UpdateParameters;
+var
+  ParamsList, FigureList: TStringArray;
+  figure: TFigureBase;
+  param: TParameter;
+  contains: boolean;
+  tempParam, p: String;
+  j, k: integer;
+begin
+  for param in Params do
+    param.ParamPanel.Visible := False;
+  k := 0;
+
+  ParamsList := GetParametersList;
+  for figure in CanvasFigures do
+    if figure.Selected then begin
+      k := k + 1; j := 0;
+      FigureList := figure.GetParametersList;
+      for tempParam in FigureList do begin
+        contains := False;
+        for p in ParamsList do begin
+          if tempParam = p then contains := True;
+          break;
+        end;
+        if not contains then begin
+          ParamsList[j] := tempParam;
+          j := j + 1;
+        end;
+      end;
+      SetLength(ParamsList, j);
+    end;
+
+  if (k > 0) then
+    for p in ParamsList do
+      for param in Params do
+        if (p = param.ParamLabel.Caption) then begin
+          param.ParamPanel.Visible := True; break;
+				end;
 end;
 
 procedure TActionTool.AddAnchors(figure: TFigureBase);
@@ -471,11 +515,13 @@ begin
       CanvasFigures[i].Selected := True;
       if CanvasFigures[i] is TAnchorsFigure then
         AddAnchors(CanvasFigures[i]);
+      UpdateParameters;
 		end;
 		mbRight: if CanvasFigures[i].Selected then begin
       CanvasFigures[i].Selected := False;
       if CanvasFigures[i] is TAnchorsFigure then
         RemoveAnchors(CanvasFigures[i]);
+      UpdateParameters;
     end;
   end;
 end;
@@ -529,37 +575,37 @@ end;
 procedure TPenTool.CreateParameters(APanel: TPanel);
 begin
   inherited;
-  AddPenParameters(Panel);
+  AddPenParameters;
 end;
 
 procedure TRectangleTool.CreateParameters(APanel: TPanel);
 begin
   inherited;
-  AddPenParameters(Panel);
-  AddBrushParameters(Panel);
+  AddPenParameters;
+  AddBrushParameters;
 end;
 
 procedure TRoundRectangleTool.CreateParameters(APanel: TPanel);
 var i: integer;
 begin
   inherited;
-  AddPenParameters(Panel);
-  AddBrushParameters(Panel);
+  AddPenParameters;
+  AddBrushParameters;
   i := High(Params); SetLength(Params, Length(Params) + 1);
-  Params[i+1] := TIntegerSpinParameter.Create(Panel, ROUNDING_LABEL, INIT_ROUNDING);;
+  Params[i+1] := TIntegerSpinParameter.Create(Panel, ROUNDING_LABEL);
 end;
 
 procedure TEllipseTool.CreateParameters(APanel: TPanel);
 begin
   inherited;
-  AddPenParameters(Panel);
-  AddBrushParameters(Panel);
+  AddPenParameters;
+  AddBrushParameters;
 end;
 
 procedure TLineTool.CreateParameters(APanel: TPanel);
 begin
   inherited;
-  AddPenParameters(Panel);
+  AddPenParameters;
 end;
 
 procedure TPolyLineTool.CreateFigure(FPoint: TPoint);
@@ -595,7 +641,7 @@ end;
 procedure TPolyLineTool.CreateParameters(APanel: TPanel);
 begin
   inherited;
-  AddPenParameters(Panel);
+  AddPenParameters;
 end;
 
 procedure RegisterTool(ATool: TTool; AFigureClass: TFigureClass; BMPSorce: String);
