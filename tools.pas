@@ -5,9 +5,11 @@ unit tools;
 interface
 
 uses
-  Classes, SysUtils, Graphics, ExtCtrls, Controls, LCLIntf, LCLType, math, figures, parameters, transform;
+  Classes, SysUtils, Graphics, ExtCtrls, Controls, LCLIntf, LCLType, math, figures, parameters, transform, Dialogs;
 
 type
+
+  SelectionMode = (figureMode, anchorMode);
 
   TTool = class
     Bitmap: TBitmap;
@@ -15,7 +17,7 @@ type
     Params: TParamsArray;
     FigureClass: TFigureClass;
     isDrawing: Boolean;
-    procedure CreateFigure(FPoint: TPoint);
+    procedure CreateFigure(FPoint: TPoint); virtual;
     procedure MouseDown(FPoint: TPoint; Button: TMouseButton; Shift: TShiftState); virtual;
     procedure MouseMove(APoint: TPoint); virtual;
     procedure MouseUp(APoint: TPoint; Button: TMouseButton); virtual;
@@ -41,6 +43,7 @@ type
   end;
 
   TInvisibleActionTool = class(TActionTool)
+    prevPoint, newPoint: TDPoint;
     procedure MouseDown(FPoint: TPoint; Button: TMouseButton; Shift: TShiftState); override;
   end;
 
@@ -52,20 +55,27 @@ type
     procedure MouseUp(APoint: TPoint; Button: TMouseButton); override;
   end;
 
-  TSelectionTool = class(TActionTool)
+  TSelectionTool = class(TInvisibleActionTool)
+    Mode: SelectionMode;
+    AnchorIndex: Integer;
     procedure MouseDown(FPoint: TPoint; Button: TMouseButton; Shift: TShiftState); override;
+    procedure MouseMove(APoint: TPoint); override;
     procedure MouseUp(APoint: TPoint; Button: TMouseButton); override;
+    procedure MovePoint(dx, dy: double);
+    procedure ResizeFigure(dx, dy: double);
+    procedure MoveFigurePoint(tPoint: TDPoint; minX, minY, maxX, maxY: integer; var dx, dy: double);
+    procedure FigureModeMouseUp(APoint: TPoint; Button: TMouseButton);
     procedure ChangeSelection(i: integer; Button: TMouseButton);
   end;
 
   TMoveTool = class(TInvisibleActionTool)
-    prevPoint, newPoint: TDPoint;
     procedure MouseDown(FPoint: TPoint; Button: TMouseButton; Shift: TShiftState); override;
     procedure MouseMove(APoint: TPoint); override;
     procedure MouseUp(APoint: TPoint; Button: TMouseButton); override;
 	end;
 
   TPenTool = class(TTool)
+    procedure CreateFigure(FPoint: TPoint); override;
     procedure CreateParameters(APanel: TPanel); override;
   end;
 
@@ -86,6 +96,7 @@ type
   end;
 
   TPolyLineTool = class(TTool)
+    procedure CreateFigure(FPoint: TPoint); override;
     procedure MouseDown(FPoint: TPoint; Button: TMouseButton; Shift: TShiftState); override;
     procedure MouseMove(APoint: TPoint); override;
     procedure MouseUp(APoint: TPoint; Button: TMouseButton); override;
@@ -292,13 +303,133 @@ begin
 end;
 
 procedure TSelectionTool.MouseDown(FPoint: TPoint; Button: TMouseButton; Shift: TShiftState);
+var i: integer;
 begin
   inherited;
-  if initShift then
+
+  Mode := figureMode;
+  for i := Low(AnchorsFigures) to High(AnchorsFigures) do begin
+    DeleteObject(AnchorsFigures[i].Region); AnchorsFigures[i].SetRegion;
+    if PtInRegion(AnchorsFigures[i].Region, FPoint.x, FPoint.y) then begin
+      Mode := anchorMode;
+      AnchorIndex := i;
+      newPoint := ScreenToWorld(FPoint);
+      break;
+		end;
+	end;
+
+  if initShift and (Mode = figureMode) then
     CanvasFigures[High(CanvasFigures)].PenStyle := psDash;
 end;
 
+procedure TSelectionTool.MouseMove(APoint: TPoint);
+var
+  dx, dy: double;
+begin
+  inherited;
+  if (Mode = anchorMode) then
+    with AnchorsFigures[AnchorIndex] do begin
+      prevPoint := newPoint;
+      newPoint := ScreenToWorld(APoint);
+      dx := newPoint.x - prevPoint.x;
+      dy := newPoint.y - prevPoint.y;
+
+      if (Position = PointPos) then MovePoint(dx, dy)
+      else ResizeFigure(dx, dy);
+		end;
+end;
+
 procedure TSelectionTool.MouseUp(APoint: TPoint; Button: TMouseButton);
+begin
+  if (mode = figureMode) then FigureModeMouseUp(APoint, Button);
+  inherited;
+end;
+
+procedure TSelectionTool.MovePoint(dx, dy: double);
+begin
+  with AnchorsFigures[AnchorIndex] do begin
+    with Figure do begin
+      Points[PointIndex].x := Points[PointIndex].x + dx;
+      Points[PointIndex].y := Points[PointIndex].y + dy;
+    end;
+    Points[0].x := Points[0].x + dx;
+    Points[0].y := Points[0].y + dy;
+	end;
+end;
+
+procedure TSelectionTool.ResizeFigure(dx, dy: double);
+var
+  minX, minY, maxX, maxY: integer;
+  i: TAnchor;
+  tPoint, p: TDPoint;
+begin
+  with AnchorsFigures[AnchorIndex] do begin
+    p := Points[0];
+    with Figure do begin
+      if (Points[Low(Points)].x <= Points[High(Points)].x) then begin
+        minX := Low(Points); maxX := High(Points);
+  	  end else begin
+        minX := High(Points); maxX := Low(Points);
+  	  end;
+      if (Points[Low(Points)].y <= Points[High(Points)].y) then begin
+        minY := Low(Points); maxY := High(Points);
+  	  end else begin
+        minY := High(Points); maxY := Low(Points);
+  	  end;
+
+      case Position of
+        TopLeft: begin
+          tPoint.x := Points[minX].x + dx;
+          tPoint.y := Points[minY].y + dy;
+          MoveFigurePoint(tPoint, minX, minY, maxX, maxY, dx, dy);
+          Points[minX].x := Points[minX].x + dx;
+          Points[minY].y := Points[minY].y + dy;
+  		  end;
+        TopRight: begin
+          tPoint.x := Points[maxX].x + dx;
+          tPoint.y := Points[minY].y + dy;
+          MoveFigurePoint(tPoint, minX, minY, maxX, maxY, dx, dy);
+          Points[maxX].x := Points[maxX].x + dx;
+          Points[minY].y := Points[minY].y + dy;
+  		  end;
+        BottomLeft: begin
+          tPoint.x := Points[minX].x + dx;
+          tPoint.y := Points[maxY].y + dy;
+          MoveFigurePoint(tPoint, minX, minY, maxX, maxY, dx, dy);
+          Points[minX].x := Points[minX].x + dx;
+          Points[maxY].y := Points[maxY].y + dy;
+  		  end;
+        BottomRight: begin
+          tPoint.x := Points[maxX].x + dx;
+          tPoint.y := Points[maxY].y + dy;
+          MoveFigurePoint(tPoint, minX, minY, maxX, maxY, dx, dy);
+          Points[maxX].x := Points[maxX].x + dx;
+          Points[maxY].y := Points[maxY].y + dy;
+  		  end;
+  	  end;
+
+      for i in AnchorsFigures do
+        if (i.Figure = Figure) then begin
+          if (i.Points[0].x = p.x) then i.Points[0].x := i.Points[0].x + dx;
+          if (i.Points[0].y = p.y) then i.Points[0].y := i.Points[0].y + dy;
+  		  end;
+    end;
+  end;
+end;
+
+procedure TSelectionTool.MoveFigurePoint(tPoint: TDPoint; minX, minY, maxX, maxY: integer; var dx, dy: double);
+begin
+  with AnchorsFigures[AnchorIndex] do begin
+    if ((tPoint.x >= Figure.Points[maxX].x) and ((Position = TopLeft) or (Position = BottomLeft)))
+      or ((tPoint.x <= Figure.Points[minX].x) and ((Position = TopRight) or (Position = BottomRight)))
+        then dx := 0;
+    if ((tPoint.y <= Figure.Points[minY].y) and ((Position = BottomLeft) or (Position = BottomRight)))
+      or ((tPoint.y >= Figure.Points[maxY].y) and ((Position = TopLeft) or (Position = TopRight)))
+        then dy := 0;
+  end;
+end;
+
+procedure TSelectionTool.FigureModeMouseUp(APoint: TPoint; Button: TMouseButton);
 var i: integer; tempReg, reg: HRGN;
 begin
   if initCtrl then begin
@@ -331,8 +462,6 @@ begin
         end;
       end;
   end;
-
-  inherited;
 end;
 
 procedure TSelectionTool.ChangeSelection(i: integer; Button: TMouseButton);
@@ -391,6 +520,12 @@ begin
 	isDrawing := False;
 end;
 
+procedure TPenTool.CreateFigure(FPoint: TPoint);
+begin
+  inherited;
+  (CanvasFigures[High(CanvasFigures)] as TPolyLine).Tool := pen;
+end;
+
 procedure TPenTool.CreateParameters(APanel: TPanel);
 begin
   inherited;
@@ -425,6 +560,12 @@ procedure TLineTool.CreateParameters(APanel: TPanel);
 begin
   inherited;
   AddPenParameters(Panel);
+end;
+
+procedure TPolyLineTool.CreateFigure(FPoint: TPoint);
+begin
+  inherited;
+  (CanvasFigures[High(CanvasFigures)] as TPolyLine).Tool := pline;
 end;
 
 procedure TPolyLineTool.MouseDown(FPoint: TPoint; Button: TMouseButton; Shift: TShiftState);

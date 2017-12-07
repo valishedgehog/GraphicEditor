@@ -12,6 +12,7 @@ type
   PPoint = array[0..3] of TPoint;
 
   AnchorPos = (TopLeft, TopRight, BottomLeft, BottomRight, PointPos);
+  PolyLineTool = (pen, pline);
 
   TFigureBase = class(TObject)
     Points: TDPointsArray;
@@ -30,9 +31,11 @@ type
 
   TAnchor = class(TFigureBase)
     Figure: TFigureBase;
-    Pos: AnchorPos;
-    constructor Create(FPoint: TDPoint; APos: AnchorPos);
+    Position: AnchorPos;
+    PointIndex: integer;
+    constructor Create(FPoint: TDPoint; APos: AnchorPos; APointIndex: Integer);
     procedure SetRegion; override;
+    function GetTempPos: TPoint;
     procedure Draw(ACanvas: TCanvas); override;
 	end;
 
@@ -66,8 +69,10 @@ type
     procedure Draw(ACanvas: TCanvas); override;
   end;
 
-  TPolyLine = class(TFigureBase)
+  TPolyLine = class(TAnchorsOnPointsFigure)
+    Tool: PolyLineTool;
     procedure SetRegion; override;
+    function GetAnchors: TAnchorsArray; override;
     procedure Draw(ACanvas: TCanvas); override;
   end;
 
@@ -162,7 +167,7 @@ begin
   end;
 end;
 
-constructor TAnchor.Create(FPoint: TDPoint; APos: AnchorPos);
+constructor TAnchor.Create(FPoint: TDPoint; APos: AnchorPos; APointIndex: Integer);
 begin
   SetLength(Points, Length(Points) + 1);
   Points[High(Points)] := FPoint;
@@ -171,47 +176,54 @@ begin
   PenStyle := psSolid;
   BrushColor := clRed;
   BrushStyle := bsSolid;
-  Pos := APos;
+  Position := APos;
+  PointIndex := APointIndex;
 end;
 
 procedure TAnchor.SetRegion;
+var t: TPoint;
 begin
-  with WorldToScreen(Points[Low(Points)]) do
+  t := GetTempPos;
   Region := CreateRectRgn(
-    x - ANCHOR_PADDING, y - ANCHOR_PADDING,
-    x + ANCHOR_PADDING, y + ANCHOR_PADDING
+    t.x - ANCHOR_PADDING, t.y - ANCHOR_PADDING,
+    t.x + ANCHOR_PADDING, t.y + ANCHOR_PADDING
   );
 end;
 
-procedure TAnchor.Draw(ACanvas: TCanvas);
-var tx, ty: integer;
+function TAnchor.GetTempPos: TPoint;
 begin
-  inherited;
   with WorldToScreen(Points[Low(Points)]) do
-    case Pos of
+    case Position of
       TopLeft: begin
-        tx := x - SELECTION_PADDING;
-        ty := y - SELECTION_PADDING;
+        Result.x := x - SELECTION_PADDING;
+        Result.y := y - SELECTION_PADDING;
 			end;
       TopRight: begin
-        tx := x + SELECTION_PADDING;
-        ty := y - SELECTION_PADDING;
+        Result.x := x + SELECTION_PADDING;
+        Result.y := y - SELECTION_PADDING;
 			end;
       BottomLeft: begin
-        tx := x - SELECTION_PADDING;
-        ty := y + SELECTION_PADDING;
+        Result.x := x - SELECTION_PADDING;
+        Result.y := y + SELECTION_PADDING;
 			end;
       BottomRight: begin
-        tx := x + SELECTION_PADDING;
-        ty := y + SELECTION_PADDING;
+        Result.x := x + SELECTION_PADDING;
+        Result.y := y + SELECTION_PADDING;
 			end;
       PointPos: begin
-        tx := x; ty := y;
+        Result.x := x; Result.y := y;
 			end;
 		end;
+end;
+
+procedure TAnchor.Draw(ACanvas: TCanvas);
+var t: TPoint;
+begin
+  inherited;
+  t := GetTempPos;
 	ACanvas.Rectangle(
-    tx - ANCHOR_PADDING, ty - ANCHOR_PADDING,
-    tx + ANCHOR_PADDING, ty + ANCHOR_PADDING
+    t.x - ANCHOR_PADDING, t.y - ANCHOR_PADDING,
+    t.x + ANCHOR_PADDING, t.y + ANCHOR_PADDING
   );
 end;
 
@@ -220,10 +232,10 @@ var p1, p2: TDPoint;
 begin
   SetLength(Result, 4);
 	p1 := FindTopLeft; p2 := FindBottomRight;
-  Result[0] := TAnchor.Create(p1, TopLeft);
-  Result[1] := TAnchor.Create(DPoint(p2.x, p1.y), TopRight);
-  Result[2] := TAnchor.Create(DPoint(p1.x, p2.y), BottomLeft);
-  Result[3] := TAnchor.Create(p2, BottomRight);
+  Result[0] := TAnchor.Create(p1, TopLeft, 0);
+  Result[1] := TAnchor.Create(DPoint(p2.x, p1.y), TopRight, 0);
+  Result[2] := TAnchor.Create(DPoint(p1.x, p2.y), BottomLeft, 0);
+  Result[3] := TAnchor.Create(p2, BottomRight, 0);
 end;
 
 function TAnchorsOnPointsFigure.GetAnchors: TAnchorsArray;
@@ -231,7 +243,7 @@ var i: integer;
 begin
   SetLength(Result, Length(Points));
   for i := Low(Points) to High(Points) do
-    Result[i] := TAnchor.Create(Points[i], PointPos);
+    Result[i] := TAnchor.Create(Points[i], PointPos, i);
 end;
 
 procedure TRectangle.SetRegion;
@@ -334,6 +346,11 @@ begin
       DeleteObject(TempRegion);
     end;
   end;
+end;
+
+function TPolyLine.GetAnchors: TAnchorsArray;
+begin
+  if (Tool = pline) then Result := inherited;
 end;
 
 procedure TPolyLine.Draw(ACanvas: TCanvas);
