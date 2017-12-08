@@ -21,7 +21,7 @@ type
     procedure MouseUp(APoint: TPoint; Button: TMouseButton); virtual;
     procedure AddPoint(APoint: TPoint); virtual;
     procedure CreateParameters(APanel: TPanel); virtual;
-    procedure ShowParameters;
+    procedure ShowParameters; virtual;
     procedure DestroyFigure;
     procedure AddPenParameters;
     procedure AddBrushParameters;
@@ -37,6 +37,7 @@ type
     procedure MouseUp(APoint: TPoint; Button: TMouseButton); override;
     procedure CreateParameters(APanel: TPanel); override;
     procedure UpdateParameters;
+    procedure ShowParameters; override;
     procedure AddAnchors(figure: TFigureBase);
     procedure RemoveAnchors(figure: TFigureBase);
   end;
@@ -235,7 +236,7 @@ procedure TActionTool.CreateParameters(APanel: TPanel);
 begin
   inherited;
   CreateParametersFromList(GetParametersList, Panel, Params);
-  UpdateParameters; UpdateParameters;
+  UpdateParameters;
 end;
 
 procedure TActionTool.UpdateParameters;
@@ -276,6 +277,12 @@ begin
         if (sParam = param.ParamLabel.Caption) then begin
           param.ParamPanel.Visible := True; break;
         end;
+end;
+
+procedure TActionTool.ShowParameters;
+begin
+  inherited;
+  UpdateParameters;
 end;
 
 procedure TActionTool.AddAnchors(figure: TFigureBase);
