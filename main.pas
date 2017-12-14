@@ -45,7 +45,7 @@ type
     procedure MEditUpClick(Sender: TObject);
     procedure MFileCloseClick(Sender: TObject);
     procedure MFileOpenClick(Sender: TObject);
-		procedure MFileSaveAsClick(Sender: TObject);
+    procedure MFileSaveAsClick(Sender: TObject);
     procedure MFileSaveClick(Sender: TObject);
     procedure MHelpAboutClick(Sender: TObject);
     procedure MFileExitClick(Sender: TObject);
@@ -382,7 +382,7 @@ begin
       figures.Add(obj);
     end;
     data.Add(JSON_FIGURES, figures);
-    WriteLn(f, data.FormatJSON);
+    WriteLn(f, data.AsJSON);
     System.Close(f);
     data.Free;
   end;
@@ -403,12 +403,18 @@ begin
         SetLength(CanvasFigures, Length(CanvasFigures) + 1);
         CanvasFigures[High(CanvasFigures)] := fClass.Create(DPoint(0, 0));
         with CanvasFigures[High(CanvasFigures)] do begin
-          PenStyle := PEN_STYLES[Get(JSON_PEN_STYLE)].PenStyle;
-          BrushStyle := BRUSH_STYLES[Get(JSON_BRUSH_STYLE)].BrushStyle;
-          PenColor := Get(JSON_PEN_COLOR);
-          BrushColor := Get(JSON_BRUSH_COLOR);
-          PenWidth := Get(JSON_PEN_WIDTH);
-          Rounding := Get(JSON_ROUNDING);
+          try PenStyle := PEN_STYLES[Get(JSON_PEN_STYLE)].PenStyle;
+          except PenStyle := INIT_PEN_STYLE; end;
+          try BrushStyle := BRUSH_STYLES[Get(JSON_BRUSH_STYLE)].BrushStyle;
+          except BrushStyle := INIT_BRUSH_STYLE; end;
+          try PenColor := Get(JSON_PEN_COLOR);
+          except PenColor := INIT_PEN_COLOR; end;
+          try BrushColor := Get(JSON_BRUSH_COLOR);
+          except BrushColor:= INIT_BRUSH_COLOR; end;
+          try PenWidth := Get(JSON_PEN_WIDTH);
+          except PenWidth := INIT_PEN_WIDTH; end;
+          try Rounding := Get(JSON_ROUNDING);
+          except Rounding := INIT_ROUNDING; end;
 
           SetLength(Points, 0);
           JPoints := TJSONArray(GetPath(JSON_POINTS));

@@ -1,7 +1,7 @@
 object MainForm: TMainForm
-  Left = 699
+  Left = 698
   Height = 539
-  Top = 194
+  Top = 168
   Width = 848
   Caption = 'Vector Graphic Editor'
   ClientHeight = 516
@@ -620,9 +620,9 @@ object MainForm: TMainForm
     AnchorSideRight.Control = VerScrollBar
     AnchorSideBottom.Control = HorScrollBar
     Left = 100
-    Height = 502
+    Height = 504
     Top = 0
-    Width = 734
+    Width = 736
     Anchors = [akTop, akLeft, akRight, akBottom]
     ParentColor = False
     OnMouseDown = PaintBoxMouseDown
@@ -639,8 +639,8 @@ object MainForm: TMainForm
     AnchorSideBottom.Control = Owner
     AnchorSideBottom.Side = asrBottom
     Left = 100
-    Height = 14
-    Top = 502
+    Height = 12
+    Top = 504
     Width = 718
     Anchors = [akLeft, akRight, akBottom]
     BorderSpacing.Left = 100
@@ -659,10 +659,10 @@ object MainForm: TMainForm
     AnchorSideRight.Side = asrBottom
     AnchorSideBottom.Control = Owner
     AnchorSideBottom.Side = asrBottom
-    Left = 834
+    Left = 836
     Height = 486
     Top = 0
-    Width = 14
+    Width = 12
     Anchors = [akTop, akRight, akBottom]
     BorderSpacing.Bottom = 30
     Constraints.MaxWidth = 30
