@@ -18,12 +18,12 @@ type
     MEditDelete: TMenuItem;
     MEditUp: TMenuItem;
     MEditDown: TMenuItem;
-		MFileClose: TMenuItem;
-		MFileOpen: TMenuItem;
-		MFileSaveAs: TMenuItem;
-		MFileSave: TMenuItem;
-		OpenDialog: TOpenDialog;
-		SaveDialog: TSaveDialog;
+    MFileClose: TMenuItem;
+    MFileOpen: TMenuItem;
+    MFileSaveAs: TMenuItem;
+    MFileSave: TMenuItem;
+    OpenDialog: TOpenDialog;
+    SaveDialog: TSaveDialog;
     ScaleSpin: TFloatSpinEdit;
     HorScrollBar: TScrollBar;
     ScaleLabel: TLabel;
@@ -331,22 +331,22 @@ begin
   if (OpenDialog.Execute) then begin
     openedFile := OpenDialog.FileName;
     fStream := TFileStream.Create(openedFile, fmOpenRead);
-		try with TJSONParser.Create(fStream) do
+    try with TJSONParser.Create(fStream) do
       try
         JData := Parse;
-			finally
+      finally
         Free;
-		  end;
-	  except
+      end;
+    except
       ShowMessage('Error while opening file');
       fStream.Free;
       JData.Free;
       exit;
-	  end;
+    end;
     fStream.Free;
     MFileClose.Click;
     LoadPicture(JData);
-	end;
+  end;
 end;
 
 procedure TMainForm.MFileSaveAsClick(Sender: TObject);
@@ -418,7 +418,7 @@ begin
               Points[High(Points)] := DPoint(Get('x'), Get('y'));
             end;
         end;
-		  end;
+      end;
   except
     ShowMessage('Error while opening file');
     JData.Free;

@@ -108,7 +108,7 @@ begin
     Height := 20;
     Top := 0;
     Alignment := taCenter;
-    Font.Height := 20;
+    Font.Size := 12;
   end;
 end;
 
