@@ -6,7 +6,8 @@ interface
 
 uses
   Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, Menus,
-  ExtCtrls, Buttons, StdCtrls, Spin, Math, Types, about, tools, figures, transform, constants;
+  ExtCtrls, Buttons, StdCtrls, Spin, Math, Types, fpjson, jsonparser, jsonscanner,
+  about, tools, figures, transform, constants;
 
 type
 
@@ -17,6 +18,11 @@ type
     MEditDelete: TMenuItem;
     MEditUp: TMenuItem;
     MEditDown: TMenuItem;
+		MFileClose: TMenuItem;
+		MFIleOpen: TMenuItem;
+		MFileSaveAs: TMenuItem;
+		MFileSave: TMenuItem;
+		SaveDialog: TSaveDialog;
     ScaleSpin: TFloatSpinEdit;
     HorScrollBar: TScrollBar;
     ScaleLabel: TLabel;
@@ -36,6 +42,9 @@ type
     procedure MEditDeleteClick(Sender: TObject);
     procedure MEditDownClick(Sender: TObject);
     procedure MEditUpClick(Sender: TObject);
+    procedure MFileCloseClick(Sender: TObject);
+		procedure MFileSaveAsClick(Sender: TObject);
+    procedure MFileSaveClick(Sender: TObject);
     procedure MHelpAboutClick(Sender: TObject);
     procedure MFileExitClick(Sender: TObject);
     procedure PaintBoxMouseDown(Sender: TObject; Button: TMouseButton;
@@ -50,6 +59,7 @@ type
     procedure PaintBoxResize(Sender: TObject);
     procedure ScaleSpinChange(Sender: TObject);
     procedure SetScrollBars;
+    procedure SavePicture;
     procedure ScrollBarScroll(Sender: TObject; ScrollCode: TScrollCode;
       var ScrollPos: integer);
   end;
@@ -57,6 +67,7 @@ type
 var
   MainForm: TMainForm;
   currentTool: TTool;
+  openedFile: String;
 
 implementation
 
@@ -293,6 +304,52 @@ begin
       end
   end;
   PaintBox.Invalidate;
+end;
+
+procedure TMainForm.MFileCloseClick(Sender: TObject);
+var i: TFigureBase;
+begin
+  for i in CanvasFigures do
+    i.Destroy;
+  SetLength(CanvasFigures, 0);
+  for i in AnchorsFigures do
+    i.Destroy;
+  SetLength(AnchorsFigures, 0);
+  openedFile:='';
+  PaintBox.Invalidate;
+end;
+
+procedure TMainForm.MFileSaveAsClick(Sender: TObject);
+begin
+  SaveDialog.DefaultExt := 'json';
+  SaveDialog.Filter := 'JSON files|*.json';
+  SaveDialog.Execute;
+  openedFile := SaveDialog.FileName;
+  SavePicture;
+end;
+
+procedure TMainForm.MFileSaveClick(Sender: TObject);
+begin
+  if (openedFile = '') then
+    MFileSaveAs.Click
+  else SavePicture;
+end;
+
+procedure TMainForm.SavePicture;
+var
+  f: Text;
+  i: TFigureBase;
+  s: string;
+begin
+if (openedFile <> '') then begin
+    System.Assign(f, openedFile);
+    System.Rewrite(f);
+    for i in CanvasFigures do begin
+      s := i.Save;
+      Writeln(f, s);
+    end;
+    System.Close(f);
+  end;
 end;
 
 end.

@@ -5,7 +5,7 @@ unit figures;
 interface
 
 uses
-  Classes, SysUtils, Graphics, LCLIntf, LCLType, transform, constants;
+  Classes, SysUtils, Graphics, LCLIntf, LCLType, transform, constants, fpjson;
 
 type
 
@@ -20,9 +20,12 @@ type
     constructor Create(FPoint: TDPoint);
     procedure SetRegion; virtual; abstract;
     procedure Draw(ACanvas: TCanvas); virtual;
+    function GetPenStyleNumber: Integer;
+    function GetBrushStyleNumber: Integer;
     function GetParametersList: TStringArray; virtual;
     function FindTopLeft: TDPoint;
     function FindBottomRight: TDPoint;
+    function Save: String;
   end;
 
   TAnchor = class(TFigureBase)
@@ -130,7 +133,25 @@ end;
 
 function TFigureBase.GetParametersList: TStringArray;
 begin
+  SetLength(Result, 0);
+end;
 
+function TFigureBase.GetPenStyleNumber: Integer;
+var i: integer;
+begin
+  for i := Low(PEN_STYLES) to High(PEN_STYLES) do
+    if (PenStyle = PEN_STYLES[i].PenStyle) then begin
+      Result := i; break;
+    end;
+end;
+
+function TFigureBase.GetBrushStyleNumber: Integer;
+var i: integer;
+begin
+  for i := Low(BRUSH_STYLES) to High(BRUSH_STYLES) do
+    if (BrushStyle = BRUSH_STYLES[i].BrushStyle) then begin
+      Result := i; break;
+    end;
 end;
 
 function TFigureBase.FindTopLeft: TDPoint;
@@ -157,6 +178,31 @@ begin
     if (i.y > Result.y) then
       Result.y := i.y;
   end;
+end;
+
+function TFigureBase.Save: String;
+var
+  obj: TJSONObject;
+  pointsArr: TJSONArray;
+  t: TDPoint;
+begin
+  obj := TJSONObject.Create;
+  obj.Add('Class', Self.ClassName);
+
+  obj.Add('PenStyle', TJSONIntegerNumber.Create(GetPenStyleNumber));
+  obj.Add('BrushStyle', TJSONIntegerNumber.Create(GetBrushStyleNumber));
+  obj.Add('PenColor', TJSONIntegerNumber.Create(PenColor));
+  obj.Add('BrushBolor', TJSONIntegerNumber.Create(BrushColor));
+  obj.Add('PenWidth', TJSONIntegerNumber.Create(PenWidth));
+  obj.Add('Rouding', TJSONIntegerNumber.Create(Rounding));
+
+  pointsArr := TJSONArray.Create;
+  for t in Points do
+    pointsArr.Add(TJSONObject.Create(['x', t.x, 'y', t.y]));
+  obj.Add('Points', pointsArr);
+
+  Result := obj.FormatJSON;
+  obj.Free;
 end;
 
 constructor TAnchor.Create(FPoint: TDPoint; APos: AnchorPos; APointIndex: Integer);
