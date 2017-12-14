@@ -25,11 +25,21 @@ type
   PolyLineTool = (pen, pline);
 
 const
-  PEN_WIDTH_LABEL = 'Pen Width';
-  PEN_STYLE_LABEL = 'Pen Style';
-  BRUSH_STYLE_LABEL = 'Brush Style';
-  PEN_COLOR_LABEL = 'Pen Color';
-  BRUSH_COLOR_LABEL = 'Brush Color';
+  JSON_FIGURES = 'Figures';
+  JSON_CLASS_NAME = 'Class';
+  JSON_PEN_STYLE = 'PenStyle';
+  JSON_BRUSH_STYLE = 'BrushStyle';
+  JSON_PEN_COLOR = 'PenColor';
+  JSON_BRUSH_COLOR = 'BrushColor';
+  JSON_PEN_WIDTH = 'PenWidth';
+  JSON_ROUNDING = 'Rouding';
+  JSON_POINTS = 'Points';
+
+  PEN_WIDTH_LABEL = 'Pen width';
+  PEN_STYLE_LABEL = 'Pen style';
+  BRUSH_STYLE_LABEL = 'Brush style';
+  PEN_COLOR_LABEL = 'Pen color';
+  BRUSH_COLOR_LABEL = 'Brush color';
   ROUNDING_LABEL = 'Rounding';
 
   INIT_PEN_WIDTH = 1;

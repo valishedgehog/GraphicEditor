@@ -25,7 +25,8 @@ type
     function GetParametersList: TStringArray; virtual;
     function FindTopLeft: TDPoint;
     function FindBottomRight: TDPoint;
-    function Save: String;
+    function Save: TJSONObject;
+    procedure Load; virtual; abstract;
   end;
 
   TAnchor = class(TFigureBase)
@@ -79,13 +80,17 @@ type
   end;
 
   TFigureClass = class of TFigureBase;
+  TFigureClassArray = array of TFigureClass;
   TFiguresArray = array of TFigureBase;
 
   function RectAroundLine(P1, P2: TPoint; Width: Integer): PPoint;
+  procedure RegisterFigure(AClass: TFigureClass);
+  function GetFigureClassByName(Name: String): TFigureClass;
 
 var
   CanvasFigures: TFiguresArray;
   AnchorsFigures: TAnchorsArray;
+  FiguresRegister: TFigureClassArray;
 
 implementation
 
@@ -180,29 +185,28 @@ begin
   end;
 end;
 
-function TFigureBase.Save: String;
+function TFigureBase.Save: TJSONObject;
 var
   obj: TJSONObject;
   pointsArr: TJSONArray;
   t: TDPoint;
 begin
   obj := TJSONObject.Create;
-  obj.Add('Class', Self.ClassName);
+  obj.Add(JSON_CLASS_NAME, Self.ClassName);
 
-  obj.Add('PenStyle', TJSONIntegerNumber.Create(GetPenStyleNumber));
-  obj.Add('BrushStyle', TJSONIntegerNumber.Create(GetBrushStyleNumber));
-  obj.Add('PenColor', TJSONIntegerNumber.Create(PenColor));
-  obj.Add('BrushBolor', TJSONIntegerNumber.Create(BrushColor));
-  obj.Add('PenWidth', TJSONIntegerNumber.Create(PenWidth));
-  obj.Add('Rouding', TJSONIntegerNumber.Create(Rounding));
+  obj.Add(JSON_PEN_STYLE, TJSONIntegerNumber.Create(GetPenStyleNumber));
+  obj.Add(JSON_BRUSH_STYLE, TJSONIntegerNumber.Create(GetBrushStyleNumber));
+  obj.Add(JSON_PEN_COLOR, TJSONIntegerNumber.Create(PenColor));
+  obj.Add(JSON_BRUSH_COLOR, TJSONIntegerNumber.Create(BrushColor));
+  obj.Add(JSON_PEN_WIDTH, TJSONIntegerNumber.Create(PenWidth));
+  obj.Add(JSON_ROUNDING, TJSONIntegerNumber.Create(Rounding));
 
   pointsArr := TJSONArray.Create;
   for t in Points do
     pointsArr.Add(TJSONObject.Create(['x', t.x, 'y', t.y]));
-  obj.Add('Points', pointsArr);
+  obj.Add(JSON_POINTS, pointsArr);
 
-  Result := obj.FormatJSON;
-  obj.Free;
+  Result := obj;
 end;
 
 constructor TAnchor.Create(FPoint: TDPoint; APos: AnchorPos; APointIndex: Integer);
@@ -427,5 +431,28 @@ begin
     ScreenPoints[i] := WorldToScreen(Points[i]);
   ACanvas.Polyline(ScreenPoints);
 end;
+
+procedure RegisterFigure(AClass: TFigureClass);
+begin
+  SetLength(FiguresRegister, Length(FiguresRegister) + 1);
+  FiguresRegister[High(FiguresRegister)] := AClass;
+end;
+
+function GetFigureClassByName(Name: String): TFigureClass;
+var i: TFigureClass;
+begin
+  for i in FiguresRegister do
+    if i.ClassName = Name then begin
+      Result := i;
+      Exit;
+    end;
+end;
+
+initialization
+RegisterFigure(TRectangle);
+RegisterFigure(TRoundRectangle);
+RegisterFigure(TEllipse);
+RegisterFigure(TLine);
+RegisterFigure(TPolyLine);
 
 end.

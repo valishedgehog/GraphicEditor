@@ -973,10 +973,11 @@ object MainForm: TMainForm
     left = 680
     object MFile: TMenuItem
       Caption = 'File'
-      object MFIleOpen: TMenuItem
+      object MFileOpen: TMenuItem
         Caption = 'Open'
         ImageIndex = 8
         ShortCut = 16463
+        OnClick = MFileOpenClick
       end
       object MFileSave: TMenuItem
         Caption = 'Save'
@@ -1176,5 +1177,8 @@ object MainForm: TMainForm
   end
   object SaveDialog: TSaveDialog
     left = 648
+  end
+  object OpenDialog: TOpenDialog
+    left = 616
   end
 end

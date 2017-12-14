@@ -19,9 +19,10 @@ type
     MEditUp: TMenuItem;
     MEditDown: TMenuItem;
 		MFileClose: TMenuItem;
-		MFIleOpen: TMenuItem;
+		MFileOpen: TMenuItem;
 		MFileSaveAs: TMenuItem;
 		MFileSave: TMenuItem;
+		OpenDialog: TOpenDialog;
 		SaveDialog: TSaveDialog;
     ScaleSpin: TFloatSpinEdit;
     HorScrollBar: TScrollBar;
@@ -43,6 +44,7 @@ type
     procedure MEditDownClick(Sender: TObject);
     procedure MEditUpClick(Sender: TObject);
     procedure MFileCloseClick(Sender: TObject);
+    procedure MFileOpenClick(Sender: TObject);
 		procedure MFileSaveAsClick(Sender: TObject);
     procedure MFileSaveClick(Sender: TObject);
     procedure MHelpAboutClick(Sender: TObject);
@@ -60,6 +62,7 @@ type
     procedure ScaleSpinChange(Sender: TObject);
     procedure SetScrollBars;
     procedure SavePicture;
+    procedure LoadPicture(JData: TJSONData);
     procedure ScrollBarScroll(Sender: TObject; ScrollCode: TScrollCode;
       var ScrollPos: integer);
   end;
@@ -319,6 +322,33 @@ begin
   PaintBox.Invalidate;
 end;
 
+procedure TMainForm.MFileOpenClick(Sender: TObject);
+var
+  fStream : TFileStream;
+  JData: TJSONData;
+begin
+  OpenDialog.Filter := 'JSON files|*.json';
+  if (OpenDialog.Execute) then begin
+    openedFile := OpenDialog.FileName;
+    fStream := TFileStream.Create(openedFile, fmOpenRead);
+		try with TJSONParser.Create(fStream) do
+      try
+        JData := Parse;
+			finally
+        Free;
+		  end;
+	  except
+      ShowMessage('Error while opening file');
+      fStream.Free;
+      JData.Free;
+      exit;
+	  end;
+    fStream.Free;
+    MFileClose.Click;
+    LoadPicture(JData);
+	end;
+end;
+
 procedure TMainForm.MFileSaveAsClick(Sender: TObject);
 begin
   SaveDialog.DefaultExt := 'json';
@@ -339,17 +369,63 @@ procedure TMainForm.SavePicture;
 var
   f: Text;
   i: TFigureBase;
-  s: string;
+  data, obj: TJSONObject;
+  figures: TJSONArray;
 begin
-if (openedFile <> '') then begin
+  if (openedFile <> '') then begin
+    data := TJSONObject.Create;
     System.Assign(f, openedFile);
     System.Rewrite(f);
+    figures := TJSONArray.Create;
     for i in CanvasFigures do begin
-      s := i.Save;
-      Writeln(f, s);
+      obj := i.Save;
+      figures.Add(obj);
     end;
+    data.Add(JSON_FIGURES, figures);
+    WriteLn(f, data.FormatJSON);
     System.Close(f);
+    data.Free;
   end;
+end;
+
+procedure TMainForm.LoadPicture(JData: TJSONData);
+var
+  i, j: integer;
+  fClass: TFigureClass;
+  JFigures: TJSONData;
+  JPoints: TJSONArray;
+begin
+  try
+    JFigures := JData.GetPath(JSON_FIGURES);
+    for i := 0 to JFigures.Count - 1 do
+      with TJSONObject(JFigures.Items[i]) do begin
+        fClass := GetFigureClassByName(Get(JSON_CLASS_NAME));
+        SetLength(CanvasFigures, Length(CanvasFigures) + 1);
+        CanvasFigures[High(CanvasFigures)] := fClass.Create(DPoint(0, 0));
+        with CanvasFigures[High(CanvasFigures)] do begin
+          PenStyle := PEN_STYLES[Get(JSON_PEN_STYLE)].PenStyle;
+          BrushStyle := BRUSH_STYLES[Get(JSON_BRUSH_STYLE)].BrushStyle;
+          PenColor := Get(JSON_PEN_COLOR);
+          BrushColor := Get(JSON_BRUSH_COLOR);
+          PenWidth := Get(JSON_PEN_WIDTH);
+          Rounding := Get(JSON_ROUNDING);
+
+          SetLength(Points, 0);
+          JPoints := TJSONArray(GetPath(JSON_POINTS));
+          for j := 0 to JPoints.Count - 1 do
+            with TJSONObject(JPoints.Items[j]) do begin
+              SetLength(Points, Length(Points) + 1);
+              Points[High(Points)] := DPoint(Get('x'), Get('y'));
+            end;
+        end;
+		  end;
+  except
+    ShowMessage('Error while opening file');
+    JData.Free;
+    MFileClose.Click;
+  end;
+  JData.Free;
+  PaintBox.Invalidate;
 end;
 
 end.
