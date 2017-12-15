@@ -117,26 +117,33 @@ var p: TParameter;
 begin
   SetLength(CanvasFigures, Length(CanvasFigures) + 1);
   CanvasFigures[High(CanvasFigures)] := FigureClass.Create(ScreenToWorld(FPoint));
-  with CanvasFigures[High(CanvasFigures)] do begin
-    PenWidth := INIT_PEN_WIDTH;
-    PenColor := INIT_PEN_COLOR;
-    BrushColor := INIT_BRUSH_COLOR;
-    PenStyle := INIT_PEN_STYLE;
-    BrushStyle := INIT_BRUSH_STYLE;
-    Rounding := INIT_ROUNDING;
+    CanvasFigures[High(CanvasFigures)].Selected := False;
 
-    Selected := False;
+    if CanvasFigures[High(CanvasFigures)] is TAnchorsOnPointsFigure then
+      with CanvasFigures[High(CanvasFigures)] as TAnchorsOnPointsFigure do begin
+        for p in Params do
+        case p.ParamLabel.Caption of
+          PEN_WIDTH_LABEL: PenWidth := GPenWidth;
+          PEN_COLOR_LABEL: PenColor := GPenColor;
+          PEN_STYLE_LABEL: PenStyle := GPenStyle;
+        end;
+      end;
 
-    for p in Params do
-    case p.ParamLabel.Caption of
-      PEN_WIDTH_LABEL: PenWidth := GPenWidth;
-      PEN_COLOR_LABEL: PenColor := GPenColor;
-      BRUSH_COLOR_LABEL: BrushColor := GBrushColor;
-      PEN_STYLE_LABEL: PenStyle := GPenStyle;
-      BRUSH_STYLE_LABEL: BrushStyle := GBrushStyle;
-      ROUNDING_LABEL: Rounding := GRounding;
-    end;
-  end;
+    if CanvasFigures[High(CanvasFigures)] is TAnchorsFigure then
+      with CanvasFigures[High(CanvasFigures)] as TAnchorsFigure do begin
+        for p in Params do
+        case p.ParamLabel.Caption of
+          BRUSH_COLOR_LABEL: BrushColor := GBrushColor;
+          BRUSH_STYLE_LABEL: BrushStyle := GBrushStyle;
+        end;
+      end;
+    if CanvasFigures[High(CanvasFigures)] is TRoundRectangle then
+      with CanvasFigures[High(CanvasFigures)] as TRoundRectangle do begin
+        for p in Params do
+        case p.ParamLabel.Caption of
+          ROUNDING_LABEL: Rounding := GRounding;
+        end;
+      end;
 end;
 
 procedure TTool.MouseDown(FPoint: TPoint; Button: TMouseButton; Shift: TShiftState);
@@ -218,7 +225,7 @@ procedure TActionTool.MouseDown(FPoint: TPoint; Button: TMouseButton; Shift: TSh
 begin
   CreateFigure(FPoint);
   isDrawing := True;
-  with CanvasFigures[High(CanvasFigures)] do begin
+  with (CanvasFigures[High(CanvasFigures)] as TAnchorsFigure) do begin
     PenStyle := psDash;
     BrushStyle := bsClear;
   end;
@@ -315,7 +322,7 @@ end;
 procedure TInvisibleActionTool.MouseDown(FPoint: TPoint; Button: TMouseButton; Shift: TShiftState);
 begin
   inherited;
-  with CanvasFigures[High(CanvasFigures)] do
+  with (CanvasFigures[High(CanvasFigures)] as TAnchorsFigure) do
     PenStyle := psClear;
 end;
 
@@ -370,7 +377,7 @@ begin
   end;
 
   if initShift and (Mode = figureMode) then
-    CanvasFigures[High(CanvasFigures)].PenStyle := psDash;
+    (CanvasFigures[High(CanvasFigures)] as TAnchorsOnPointsFigure).PenStyle := psDash;
 end;
 
 procedure TSelectionTool.MouseMove(APoint: TPoint);

@@ -138,7 +138,7 @@ begin
         with element do begin
           p1 := WorldToScreen(FindTopLeft);
           p2 := WorldToScreen(FindBottomRight);
-          w := element.PenWidth;
+          w := (element as TAnchorsOnPointsFigure).PenWidth;
           Frame(
             p1.x - SELECTION_PADDING - w div 2, p1.y - SELECTION_PADDING - w div 2,
             p2.x + SELECTION_PADDING + w div 2, p2.y + SELECTION_PADDING + w div 2
@@ -403,19 +403,7 @@ begin
         SetLength(CanvasFigures, Length(CanvasFigures) + 1);
         CanvasFigures[High(CanvasFigures)] := fClass.Create(DPoint(0, 0));
         with CanvasFigures[High(CanvasFigures)] do begin
-          try PenStyle := PEN_STYLES[Get(JSON_PEN_STYLE)].PenStyle;
-          except PenStyle := INIT_PEN_STYLE; end;
-          try BrushStyle := BRUSH_STYLES[Get(JSON_BRUSH_STYLE)].BrushStyle;
-          except BrushStyle := INIT_BRUSH_STYLE; end;
-          try PenColor := Get(JSON_PEN_COLOR);
-          except PenColor := INIT_PEN_COLOR; end;
-          try BrushColor := Get(JSON_BRUSH_COLOR);
-          except BrushColor:= INIT_BRUSH_COLOR; end;
-          try PenWidth := Get(JSON_PEN_WIDTH);
-          except PenWidth := INIT_PEN_WIDTH; end;
-          try Rounding := Get(JSON_ROUNDING);
-          except Rounding := INIT_ROUNDING; end;
-
+          Load(TJSONObject(JFigures.Items[i]));
           SetLength(Points, 0);
           JPoints := TJSONArray(GetPath(JSON_POINTS));
           for j := 0 to JPoints.Count - 1 do

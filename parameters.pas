@@ -140,8 +140,8 @@ begin
   for i in CanvasFigures do
     if i.Selected then
       case ParamLabel.Caption of
-        PEN_COLOR_LABEL: i.PenColor := Param;
-        BRUSH_COLOR_LABEL: i.BrushColor := Param;
+        PEN_COLOR_LABEL: (i as TAnchorsOnPointsFigure).PenColor := Param;
+        BRUSH_COLOR_LABEL: (i as TAnchorsFigure).BrushColor := Param;
       end;
   ParamPanel.Parent.Parent.Parent.Parent.Invalidate;
 end;
@@ -195,8 +195,8 @@ begin
   for i in CanvasFigures do
     if i.Selected then begin
       case ParamLabel.Caption of
-        PEN_WIDTH_LABEL: i.PenWidth := Param;
-        ROUNDING_LABEL: i.Rounding := Param;
+        PEN_WIDTH_LABEL: (i as TAnchorsOnPointsFigure).PenWidth := Param;
+        ROUNDING_LABEL: (i as TRoundRectangle).Rounding := Param;
       end;
     end;
   ParamPanel.Parent.Parent.Parent.Parent.Invalidate;
@@ -242,7 +242,7 @@ var i: TFigureBase;
 begin
   GPenStyle := PEN_STYLES[ParamControl.ItemIndex].PenStyle;
   for i in CanvasFigures do
-    if i.Selected then i.PenStyle := GPenStyle;
+    if i.Selected then (i as TAnchorsOnPointsFigure).PenStyle := GPenStyle;
   ParamPanel.Parent.Parent.Parent.Parent.Invalidate;
 end;
 
@@ -269,7 +269,7 @@ var i: TFigureBase;
 begin
   GBrushStyle := BRUSH_STYLES[ParamControl.ItemIndex].BrushStyle;
   for i in CanvasFigures do
-    if i.Selected then i.BrushStyle := GBrushStyle;
+    if i.Selected then (i as TAnchorsFigure).BrushStyle := GBrushStyle;
   ParamPanel.Parent.Parent.Parent.Parent.Invalidate;
 end;
 

@@ -13,20 +13,14 @@ type
     Points: TDPointsArray;
     Region: HRGN;
     Selected: Boolean;
-    PenStyle: TPenStyle;
-    BrushStyle: TBrushStyle;
-    PenColor, BrushColor: TColor;
-    PenWidth, Rounding: integer;
     constructor Create(FPoint: TDPoint);
     procedure SetRegion; virtual; abstract;
-    procedure Draw(ACanvas: TCanvas); virtual;
-    function GetPenStyleNumber: Integer;
-    function GetBrushStyleNumber: Integer;
+    procedure Draw(ACanvas: TCanvas); virtual; abstract;
     function GetParametersList: TStringArray; virtual;
     function FindTopLeft: TDPoint;
     function FindBottomRight: TDPoint;
-    function Save: TJSONObject;
-    procedure Load; virtual; abstract;
+    function Save: TJSONObject; virtual;
+    procedure Load(Obj: TJSONObject); virtual; abstract;
   end;
 
   TAnchor = class(TFigureBase)
@@ -41,14 +35,27 @@ type
 
   TAnchorsArray = array of TAnchor;
 
-  TAnchorsFigure = class(TFigureBase)
+  TAnchorsOnPointsFigure = class(TFigureBase)
+    PenWidth: integer;
+    PenStyle: TPenStyle;
+    PenColor: TColor;
+    function Save: TJSONObject; override;
+    procedure Draw(ACanvas: TCanvas); override;
+    function GetPenStyleNumber: Integer;
     function GetParametersList: TStringArray; override;
     function GetAnchors: TAnchorsArray; virtual;
+    procedure Load(Obj: TJSONObject); override;
   end;
 
-  TAnchorsOnPointsFigure = class(TAnchorsFigure)
+  TAnchorsFigure = class(TAnchorsOnPointsFigure)
+    BrushStyle: TBrushStyle;
+    BrushColor: TColor;
+    function Save: TJSONObject; override;
+    procedure Draw(ACanvas: TCanvas); override;
+    function GetBrushStyleNumber: Integer;
     function GetParametersList: TStringArray; override;
     function GetAnchors: TAnchorsArray; override;
+    procedure Load(Obj: TJSONObject); override;
   end;
 
   TRectangle = class(TAnchorsFigure)
@@ -57,7 +64,10 @@ type
   end;
 
   TRoundRectangle = class(TAnchorsFigure)
+    Rounding: Integer;
+    function Save: TJSONObject; override;
     function GetParametersList: TStringArray; override;
+    procedure Load(Obj: TJSONObject); override;
     procedure SetRegion; override;
     procedure Draw(ACanvas: TCanvas); override;
   end;
@@ -124,24 +134,12 @@ begin
   Points[High(Points)] := FPoint;
 end;
 
-procedure TFigureBase.Draw(ACanvas: TCanvas);
-begin
-  with ACanvas do
-  begin
-    Pen.Width := PenWidth;
-    Pen.Style := PenStyle;
-    Pen.Color := PenColor;
-    Brush.Color := BrushColor;
-    Brush.Style := BrushStyle;
-  end;
-end;
-
 function TFigureBase.GetParametersList: TStringArray;
 begin
   SetLength(Result, 0);
 end;
 
-function TFigureBase.GetPenStyleNumber: Integer;
+function TAnchorsOnPointsFigure.GetPenStyleNumber: Integer;
 var i: integer;
 begin
   for i := Low(PEN_STYLES) to High(PEN_STYLES) do
@@ -150,7 +148,17 @@ begin
     end;
 end;
 
-function TFigureBase.GetBrushStyleNumber: Integer;
+function TAnchorsOnPointsFigure.Save: TJSONObject;
+begin
+  Result := inherited;
+  with Result do begin
+    Add(JSON_PEN_STYLE, TJSONIntegerNumber.Create(GetPenStyleNumber));
+    Add(JSON_PEN_COLOR, TJSONIntegerNumber.Create(PenColor));
+    Add(JSON_PEN_WIDTH, TJSONIntegerNumber.Create(PenWidth));
+  end;
+end;
+
+function TAnchorsFigure.GetBrushStyleNumber: Integer;
 var i: integer;
 begin
   for i := Low(BRUSH_STYLES) to High(BRUSH_STYLES) do
@@ -194,13 +202,6 @@ begin
   obj := TJSONObject.Create;
   obj.Add(JSON_CLASS_NAME, Self.ClassName);
 
-  obj.Add(JSON_PEN_STYLE, TJSONIntegerNumber.Create(GetPenStyleNumber));
-  obj.Add(JSON_BRUSH_STYLE, TJSONIntegerNumber.Create(GetBrushStyleNumber));
-  obj.Add(JSON_PEN_COLOR, TJSONIntegerNumber.Create(PenColor));
-  obj.Add(JSON_BRUSH_COLOR, TJSONIntegerNumber.Create(BrushColor));
-  obj.Add(JSON_PEN_WIDTH, TJSONIntegerNumber.Create(PenWidth));
-  obj.Add(JSON_ROUNDING, TJSONIntegerNumber.Create(Rounding));
-
   pointsArr := TJSONArray.Create;
   for t in Points do
     pointsArr.Add(TJSONObject.Create(['x', t.x, 'y', t.y]));
@@ -213,11 +214,6 @@ constructor TAnchor.Create(FPoint: TDPoint; APos: AnchorPos; APointIndex: Intege
 begin
   SetLength(Points, Length(Points) + 1);
   Points[High(Points)] := FPoint;
-  PenWidth := 1;
-  PenColor := clBlack;
-  PenStyle := psSolid;
-  BrushColor := clRed;
-  BrushStyle := bsSolid;
   Position := APos;
   PointIndex := APointIndex;
 end;
@@ -235,7 +231,7 @@ end;
 function TAnchor.GetTempPos: TPoint;
 var w: integer;
 begin
-  w := Figure.PenWidth;
+  w := (Figure as TAnchorsOnPointsFigure).PenWidth;
   with WorldToScreen(Points[Low(Points)]) do
     case Position of
       TopLeft: begin
@@ -263,12 +259,27 @@ end;
 procedure TAnchor.Draw(ACanvas: TCanvas);
 var t: TPoint;
 begin
-  inherited;
+  with ACanvas do begin
+    Pen.Width := 1;
+    Pen.Color := clBlack;
+    Pen.Style := psSolid;
+    Brush.Color := clRed;
+    Brush.Style := bsSolid;
+  end;
   t := GetTempPos;
   ACanvas.Rectangle(
     t.x - ANCHOR_PADDING, t.y - ANCHOR_PADDING,
     t.x + ANCHOR_PADDING, t.y + ANCHOR_PADDING
   );
+end;
+
+function TAnchorsFigure.Save: TJSONObject;
+begin
+  Result := inherited;
+  with Result do begin
+    Add(JSON_BRUSH_STYLE, TJSONIntegerNumber.Create(GetBrushStyleNumber));
+    Add(JSON_BRUSH_COLOR, TJSONIntegerNumber.Create(BrushColor));
+  end;
 end;
 
 function TAnchorsFigure.GetParametersList: TStringArray;
@@ -292,6 +303,39 @@ begin
   Result[3] := TAnchor.Create(p2, BottomRight, 0);
 end;
 
+procedure TAnchorsFigure.Load(Obj: TJSONObject);
+begin
+  inherited;
+  with Obj do begin
+    try BrushStyle := BRUSH_STYLES[Get(JSON_BRUSH_STYLE)].BrushStyle;
+    except BrushStyle := INIT_BRUSH_STYLE; end;
+    try BrushColor := Get(JSON_BRUSH_COLOR);
+    except BrushColor:= INIT_BRUSH_COLOR; end;
+  end;
+end;
+
+procedure TAnchorsFigure.Draw(ACanvas: TCanvas);
+begin
+  with ACanvas do
+  begin
+    Pen.Width := PenWidth;
+    Pen.Style := PenStyle;
+    Pen.Color := PenColor;
+    Brush.Color := BrushColor;
+    Brush.Style := BrushStyle;
+  end;
+end;
+
+procedure TAnchorsOnPointsFigure.Draw(ACanvas: TCanvas);
+begin
+  with ACanvas do
+  begin
+    Pen.Width := PenWidth;
+    Pen.Style := PenStyle;
+    Pen.Color := PenColor;
+  end;
+end;
+
 function TAnchorsOnPointsFigure.GetParametersList: TStringArray;
 begin
   SetLength(Result, 3);
@@ -306,6 +350,18 @@ begin
   SetLength(Result, Length(Points));
   for i := Low(Points) to High(Points) do
     Result[i] := TAnchor.Create(Points[i], PointPos, i);
+end;
+
+procedure TAnchorsOnPointsFigure.Load(Obj: TJSONObject);
+begin
+  with Obj do begin
+    try PenStyle := PEN_STYLES[Get(JSON_PEN_STYLE)].PenStyle;
+    except PenStyle := INIT_PEN_STYLE; end;
+    try PenColor := Get(JSON_PEN_COLOR);
+    except PenColor := INIT_PEN_COLOR; end;
+    try PenWidth := Get(JSON_PEN_WIDTH);
+    except PenWidth := INIT_PEN_WIDTH; end;
+  end;
 end;
 
 procedure TRectangle.SetRegion;
@@ -357,6 +413,21 @@ begin
     WorldToScreen(Points[High(Points)]).y,
     Rounding, Rounding
   );
+end;
+
+procedure TRoundRectangle.Load(Obj: TJSONObject);
+begin
+  inherited;
+  with Obj do begin
+    try Rounding := Get(JSON_ROUNDING);
+    except Rounding := INIT_ROUNDING; end;
+  end;
+end;
+
+function TRoundRectangle.Save: TJSONObject;
+begin
+  Result := inherited;
+  Result.Add(JSON_ROUNDING, TJSONIntegerNumber.Create(Rounding));
 end;
 
 procedure TEllipse.SetRegion;
