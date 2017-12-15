@@ -156,21 +156,21 @@ begin
   if (OpenDialog.Execute) then begin
     openedFile := OpenDialog.FileName;
     fStream := TFileStream.Create(openedFile, fmOpenRead);
-    try with TJSONParser.Create(fStream) do
+    try
+      with TJSONParser.Create(fStream) do
       try
         JData := Parse;
       finally
         Free;
       end;
+      fStream.Free;
+      MFileClose.Click;
+      LoadPicture(JData);
     except
       ShowMessage('Error while opening file');
       fStream.Free;
-      JData.Free;
-      exit;
+      MFileClose.Click;
     end;
-    fStream.Free;
-    MFileClose.Click;
-    LoadPicture(JData);
   end;
 end;
 
@@ -382,7 +382,7 @@ begin
       figures.Add(obj);
     end;
     data.Add(JSON_FIGURES, figures);
-    WriteLn(f, data.AsJSON);
+    WriteLn(f, data.FormatJSON);
     System.Close(f);
     data.Free;
   end;
@@ -413,12 +413,8 @@ begin
             end;
         end;
       end;
-  except
-    ShowMessage('Error while opening file');
-    JData.Free;
-    MFileClose.Click;
+  finally JData.Free;
   end;
-  JData.Free;
   PaintBox.Invalidate;
 end;
 
