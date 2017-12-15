@@ -61,10 +61,10 @@ type
     procedure PaintBoxResize(Sender: TObject);
     procedure ScaleSpinChange(Sender: TObject);
     procedure SetScrollBars;
-    procedure SavePicture;
-    procedure LoadPicture(JData: TJSONData);
     procedure ScrollBarScroll(Sender: TObject; ScrollCode: TScrollCode;
       var ScrollPos: integer);
+    procedure SavePicture;
+    procedure LoadPicture(JData: TJSONData);
   end;
 
 var
@@ -84,6 +84,110 @@ end;
 procedure TMainForm.MHelpAboutClick(Sender: TObject);
 begin
   AboutForm.Show;
+end;
+
+procedure TMainForm.MEditDeleteClick(Sender: TObject);
+var i, j: integer;
+begin
+  j := 0;
+  if currentTool is TActionTool then begin
+    for i := Low(CanvasFigures) to High(CanvasFigures) do
+      if CanvasFigures[i].Selected then begin
+        (currentTool as TActionTool).RemoveAnchors(CanvasFigures[i]);
+        CanvasFigures[i].Free;
+      end else begin
+        CanvasFigures[j] := CanvasFigures[i];
+        j := j + 1;
+      end;
+    SetLength(CanvasFigures, j);
+  end;
+  PaintBox.Invalidate;
+end;
+
+procedure TMainForm.MEditDownClick(Sender: TObject);
+var temp: TFigureBase; i: integer;
+begin
+  // TODO
+  if (currentTool is TSelectionTool) and (Length(CanvasFigures) > 0) then begin
+    for i := Low(CanvasFigures) + 1 to High(CanvasFigures) do
+      if CanvasFigures[i].Selected then begin
+        temp := CanvasFigures[i];
+        CanvasFigures[i] := CanvasFigures[i-1];
+        CanvasFigures[i-1] := temp;
+      end
+  end;
+  PaintBox.Invalidate;
+end;
+
+procedure TMainForm.MEditUpClick(Sender: TObject);
+var temp: TFigureBase; i: integer;
+begin
+  // TODO
+  if currentTool is TSelectionTool then begin
+    for i := Low(CanvasFigures) to High(CanvasFigures) - 1 do
+      if CanvasFigures[i].Selected then begin
+        temp := CanvasFigures[i];
+        CanvasFigures[i] := CanvasFigures[i+1];
+        CanvasFigures[i+1] := temp;
+      end
+  end;
+  PaintBox.Invalidate;
+end;
+
+procedure TMainForm.MFileCloseClick(Sender: TObject);
+var i: TFigureBase;
+begin
+  for i in CanvasFigures do
+    i.Destroy;
+  SetLength(CanvasFigures, 0);
+  for i in AnchorsFigures do
+    i.Destroy;
+  SetLength(AnchorsFigures, 0);
+  openedFile:='';
+  PaintBox.Invalidate;
+end;
+
+procedure TMainForm.MFileOpenClick(Sender: TObject);
+var
+  fStream : TFileStream;
+  JData: TJSONData;
+begin
+  OpenDialog.Filter := 'JSON files|*.json';
+  if (OpenDialog.Execute) then begin
+    openedFile := OpenDialog.FileName;
+    fStream := TFileStream.Create(openedFile, fmOpenRead);
+    try with TJSONParser.Create(fStream) do
+      try
+        JData := Parse;
+      finally
+        Free;
+      end;
+    except
+      ShowMessage('Error while opening file');
+      fStream.Free;
+      JData.Free;
+      exit;
+    end;
+    fStream.Free;
+    MFileClose.Click;
+    LoadPicture(JData);
+  end;
+end;
+
+procedure TMainForm.MFileSaveAsClick(Sender: TObject);
+begin
+  SaveDialog.DefaultExt := 'json';
+  SaveDialog.Filter := 'JSON files|*.json';
+  SaveDialog.Execute;
+  openedFile := SaveDialog.FileName;
+  SavePicture;
+end;
+
+procedure TMainForm.MFileSaveClick(Sender: TObject);
+begin
+  if (openedFile = '') then
+    MFileSaveAs.Click
+  else SavePicture;
 end;
 
 procedure TMainForm.PaintBoxMouseDown(Sender: TObject; Button: TMouseButton;
@@ -219,14 +323,6 @@ begin
   VerScrollBar.PageSize := Round((Corner.y - Offset.y) / (VMax - VMin));
 end;
 
-procedure TMainForm.ScrollBarScroll(Sender: TObject; ScrollCode: TScrollCode;
-  var ScrollPos: integer);
-begin
-  Offset.x := HorScrollBar.Position;
-  Offset.y := VerScrollBar.Position;
-  PaintBox.Invalidate;
-end;
-
 procedure TMainForm.FormCreate(Sender: TObject);
 var
   i, k: integer;
@@ -261,108 +357,12 @@ begin
   end;
 end;
 
-procedure TMainForm.MEditDeleteClick(Sender: TObject);
-var i, j: integer;
+procedure TMainForm.ScrollBarScroll(Sender: TObject; ScrollCode: TScrollCode;
+  var ScrollPos: integer);
 begin
-  j := 0;
-  if currentTool is TActionTool then begin
-    for i := Low(CanvasFigures) to High(CanvasFigures) do
-      if CanvasFigures[i].Selected then begin
-        (currentTool as TActionTool).RemoveAnchors(CanvasFigures[i]);
-        CanvasFigures[i].Free;
-      end else begin
-        CanvasFigures[j] := CanvasFigures[i];
-        j := j + 1;
-      end;
-    SetLength(CanvasFigures, j);
-  end;
+  Offset.x := HorScrollBar.Position;
+  Offset.y := VerScrollBar.Position;
   PaintBox.Invalidate;
-end;
-
-procedure TMainForm.MEditDownClick(Sender: TObject);
-var temp: TFigureBase; i: integer;
-begin
-  // TODO
-  if (currentTool is TSelectionTool) and (Length(CanvasFigures) > 0) then begin
-    for i := Low(CanvasFigures) + 1 to High(CanvasFigures) do
-      if CanvasFigures[i].Selected then begin
-        temp := CanvasFigures[i];
-        CanvasFigures[i] := CanvasFigures[i-1];
-        CanvasFigures[i-1] := temp;
-      end
-  end;
-  PaintBox.Invalidate;
-end;
-
-procedure TMainForm.MEditUpClick(Sender: TObject);
-var temp: TFigureBase; i: integer;
-begin
-  // TODO
-  if currentTool is TSelectionTool then begin
-    for i := Low(CanvasFigures) to High(CanvasFigures) - 1 do
-      if CanvasFigures[i].Selected then begin
-        temp := CanvasFigures[i];
-        CanvasFigures[i] := CanvasFigures[i+1];
-        CanvasFigures[i+1] := temp;
-      end
-  end;
-  PaintBox.Invalidate;
-end;
-
-procedure TMainForm.MFileCloseClick(Sender: TObject);
-var i: TFigureBase;
-begin
-  for i in CanvasFigures do
-    i.Destroy;
-  SetLength(CanvasFigures, 0);
-  for i in AnchorsFigures do
-    i.Destroy;
-  SetLength(AnchorsFigures, 0);
-  openedFile:='';
-  PaintBox.Invalidate;
-end;
-
-procedure TMainForm.MFileOpenClick(Sender: TObject);
-var
-  fStream : TFileStream;
-  JData: TJSONData;
-begin
-  OpenDialog.Filter := 'JSON files|*.json';
-  if (OpenDialog.Execute) then begin
-    openedFile := OpenDialog.FileName;
-    fStream := TFileStream.Create(openedFile, fmOpenRead);
-    try with TJSONParser.Create(fStream) do
-      try
-        JData := Parse;
-      finally
-        Free;
-      end;
-    except
-      ShowMessage('Error while opening file');
-      fStream.Free;
-      JData.Free;
-      exit;
-    end;
-    fStream.Free;
-    MFileClose.Click;
-    LoadPicture(JData);
-  end;
-end;
-
-procedure TMainForm.MFileSaveAsClick(Sender: TObject);
-begin
-  SaveDialog.DefaultExt := 'json';
-  SaveDialog.Filter := 'JSON files|*.json';
-  SaveDialog.Execute;
-  openedFile := SaveDialog.FileName;
-  SavePicture;
-end;
-
-procedure TMainForm.MFileSaveClick(Sender: TObject);
-begin
-  if (openedFile = '') then
-    MFileSaveAs.Click
-  else SavePicture;
 end;
 
 procedure TMainForm.SavePicture;
