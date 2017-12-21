@@ -527,13 +527,13 @@ begin
   case Button of
     mbLeft: if not CanvasFigures[i].Selected then begin
       CanvasFigures[i].Selected := True;
-      if CanvasFigures[i] is TAnchorsFigure then
+      if CanvasFigures[i] is TAnchorsOnPointsFigure then
         AddAnchors(CanvasFigures[i]);
       UpdateParameters;
     end;
     mbRight: if CanvasFigures[i].Selected then begin
       CanvasFigures[i].Selected := False;
-      if CanvasFigures[i] is TAnchorsFigure then
+      if CanvasFigures[i] is TAnchorsOnPointsFigure then
         RemoveAnchors(CanvasFigures[i]);
       UpdateParameters;
     end;

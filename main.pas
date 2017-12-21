@@ -154,21 +154,17 @@ var
 begin
   OpenDialog.Filter := 'JSON files|*.json';
   if (OpenDialog.Execute) then begin
-    openedFile := OpenDialog.FileName;
-    fStream := TFileStream.Create(openedFile, fmOpenRead);
     try
+      openedFile := OpenDialog.FileName;
+      fStream := TFileStream.Create(openedFile, fmOpenRead);
       with TJSONParser.Create(fStream) do
-      try
-        JData := Parse;
-      finally
-        Free;
-      end;
+        try JData := Parse;
+        finally Free; end;
       fStream.Free;
       MFileClose.Click;
       LoadPicture(JData);
     except
       ShowMessage('Error while opening file');
-      fStream.Free;
       MFileClose.Click;
     end;
   end;
