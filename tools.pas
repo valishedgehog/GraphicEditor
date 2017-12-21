@@ -295,7 +295,7 @@ end;
 procedure TActionTool.AddAnchors(figure: TFigureBase);
 var TempAnchors: TAnchorsArray; i: integer;
 begin
-  with figure as TAnchorsFigure do begin
+  with figure as TAnchorsOnPointsFigure do begin
     TempAnchors := GetAnchors;
     for i := Low(TempAnchors) to High(TempAnchors) do begin
       SetLength(AnchorsFigures, Length(AnchorsFigures) + 1);
@@ -322,7 +322,7 @@ end;
 procedure TInvisibleActionTool.MouseDown(FPoint: TPoint; Button: TMouseButton; Shift: TShiftState);
 begin
   inherited;
-  with (CanvasFigures[High(CanvasFigures)] as TAnchorsFigure) do
+  with (CanvasFigures[High(CanvasFigures)] as TAnchorsOnPointsFigure) do
     PenStyle := psClear;
 end;
 
