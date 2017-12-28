@@ -7,7 +7,7 @@ uses
     cthreads,
     {$ENDIF}{$ENDIF}
     Interfaces,
-    Forms, main, about, transform, figures, tools, parameters, constants;
+    Forms, main, about, transform, figures, tools, parameters, constants, history;
 
 {$R *.res}
 

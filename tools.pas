@@ -5,7 +5,8 @@ unit tools;
 interface
 
 uses
-  Classes, SysUtils, Graphics, ExtCtrls, Controls, LCLIntf, LCLType, math, figures, parameters, transform, constants;
+  Classes, SysUtils, Graphics, ExtCtrls, Controls, LCLIntf, LCLType, math,
+  figures, parameters, transform, constants, history;
 
 type
 
@@ -162,6 +163,8 @@ end;
 procedure TTool.MouseUp(APoint: TPoint; Button: TMouseButton);
 begin
   isDrawing := False;
+  AddStateToHistory(GetAppState);
+  ClearRedoHistory;
 end;
 
 procedure TTool.AddPoint(APoint: TPoint);
@@ -235,7 +238,7 @@ end;
 
 procedure TActionTool.MouseUp(APoint: TPoint; Button: TMouseButton);
 begin
-  inherited;
+  isDrawing := False;
   DestroyFigure;
 end;
 
@@ -400,6 +403,7 @@ end;
 procedure TSelectionTool.MouseUp(APoint: TPoint; Button: TMouseButton);
 begin
   if (mode = figureMode) then FigureModeMouseUp(APoint, Button);
+  if (mode = anchorMode) then AddStateToHistory(GetAppState);
   inherited;
 end;
 
@@ -578,6 +582,7 @@ end;
 procedure TMoveTool.MouseUp(APoint: TPoint; Button: TMouseButton);
 begin
   isDrawing := False;
+  AddStateToHistory(GetAppState);
 end;
 
 procedure TPenTool.CreateFigure(FPoint: TPoint);
@@ -649,7 +654,7 @@ end;
 
 procedure TPolyLineTool.MouseUp(APoint: TPoint; Button: TMouseButton);
 begin
-
+  if not isDrawing then inherited;
 end;
 
 procedure TPolyLineTool.CreateParameters(APanel: TPanel);

@@ -5,7 +5,7 @@ unit constants;
 interface
 
 uses
-  Classes, SysUtils, Graphics;
+  Classes, SysUtils, Graphics, Clipbrd;
 
 type
   TBrushStyleRecord = record
@@ -18,6 +18,7 @@ type
     PenStyle: TPenStyle;
   end;
 
+  AddJFigureMode = (paste, add);
   SelectionMode = (figureMode, anchorMode);
   PPoint = array[0..3] of TPoint;
   TStringArray = array of String;
@@ -25,7 +26,7 @@ type
   PolyLineTool = (pen, pline);
 
 const
-  JSON_FIGURES = 'Figures';
+  JSON_APPNAME = 'GraphicEditor';
   JSON_CLASS_NAME = 'Class';
   JSON_PEN_STYLE = 'PenStyle';
   JSON_BRUSH_STYLE = 'BrushStyle';
@@ -34,6 +35,9 @@ const
   JSON_PEN_WIDTH = 'PenWidth';
   JSON_ROUNDING = 'Rouding';
   JSON_POINTS = 'Points';
+  JSON_COPIED_FIGURES = 'GECopiedFigures';
+
+  PASTE_FIGURE_PADDING = 20;
 
   PEN_WIDTH_LABEL = 'Pen width';
   PEN_STYLE_LABEL = 'Pen style';
@@ -71,7 +75,12 @@ const
   ANCHOR_PADDING = 4;
   LINERECT_PADDING = 10;
 
+var ClipBoard: TClipboard;
+
 implementation
+
+initialization
+ClipBoard := TClipboard.Create;
 
 end.
 

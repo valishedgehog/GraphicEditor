@@ -6,7 +6,7 @@ interface
 
 uses
   Classes, SysUtils, StdCtrls, Graphics, ExtCtrls, Forms, Controls, Buttons,
-  Dialogs, Spin, figures, constants;
+  Dialogs, Spin, figures, constants, history;
 
 type
 
@@ -14,7 +14,7 @@ type
     ParamPanel: TPanel;
     ParamLabel: TLabel;
     constructor Create(APanel: TPanel; ACaption: String); virtual;
-    procedure ChangeParameter(Sender: TObject); virtual; abstract;
+    procedure ChangeParameter(Sender: TObject); virtual;
     procedure SetParamToInit; virtual; abstract;
   end;
 
@@ -112,6 +112,12 @@ begin
   end;
 end;
 
+procedure TParameter.ChangeParameter(Sender: TObject);
+begin
+  AddStateToHistory(GetAppState);
+  ClearRedoHistory;
+end;
+
 constructor TColorParameter.Create(APanel: TPanel; ACaption: String);
 begin
   inherited Create(APanel, ACaption);
@@ -144,6 +150,7 @@ begin
         BRUSH_COLOR_LABEL: (i as TAnchorsFigure).BrushColor := Param;
       end;
   ParamPanel.Parent.Parent.Parent.Parent.Invalidate;
+  inherited;
 end;
 
 procedure TColorParameter.SetParamToInit;
@@ -200,6 +207,7 @@ begin
       end;
     end;
   ParamPanel.Parent.Parent.Parent.Parent.Invalidate;
+  inherited;
 end;
 
 procedure TIntegerSpinParameter.SetParamToInit;
@@ -244,6 +252,7 @@ begin
   for i in CanvasFigures do
     if i.Selected then (i as TAnchorsOnPointsFigure).PenStyle := GPenStyle;
   ParamPanel.Parent.Parent.Parent.Parent.Invalidate;
+  inherited;
 end;
 
 procedure TPenStyleParameter.SetParamToInit;
@@ -271,6 +280,7 @@ begin
   for i in CanvasFigures do
     if i.Selected then (i as TAnchorsFigure).BrushStyle := GBrushStyle;
   ParamPanel.Parent.Parent.Parent.Parent.Invalidate;
+  inherited;
 end;
 
 procedure TBrushStyleParameter.SetParamToInit;

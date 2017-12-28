@@ -6,8 +6,8 @@ interface
 
 uses
   Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, Menus,
-  ExtCtrls, Buttons, StdCtrls, Spin, Math, Types, fpjson, jsonparser, jsonscanner,
-  about, tools, figures, transform, constants;
+  ExtCtrls, Buttons, StdCtrls, Spin, Math, Types,
+  about, tools, figures, transform, constants, history;
 
 type
 
@@ -18,6 +18,13 @@ type
     MEditDelete: TMenuItem;
     MEditUp: TMenuItem;
     MEditDown: TMenuItem;
+    MenuItem1: TMenuItem;
+    MEditRedo: TMenuItem;
+    MEditUndo: TMenuItem;
+    MEditCopy: TMenuItem;
+    MEditPaste: TMenuItem;
+    MenuItem3: TMenuItem;
+    MenuItem4: TMenuItem;
     MFileClose: TMenuItem;
     MFileOpen: TMenuItem;
     MFileSaveAs: TMenuItem;
@@ -40,9 +47,13 @@ type
     ToolsButtons: TPanel;
     ToolsPanel: TPanel;
     procedure FormCreate(Sender: TObject);
+    procedure MEditCopyClick(Sender: TObject);
     procedure MEditDeleteClick(Sender: TObject);
     procedure MEditDownClick(Sender: TObject);
+    procedure MEditPasteClick(Sender: TObject);
+    procedure MEditRedoClick(Sender: TObject);
     procedure MEditUpClick(Sender: TObject);
+    procedure MEditUndoClick(Sender: TObject);
     procedure MFileCloseClick(Sender: TObject);
     procedure MFileOpenClick(Sender: TObject);
     procedure MFileSaveAsClick(Sender: TObject);
@@ -64,7 +75,6 @@ type
     procedure ScrollBarScroll(Sender: TObject; ScrollCode: TScrollCode;
       var ScrollPos: integer);
     procedure SavePicture;
-    procedure LoadPicture(JData: TJSONData);
   end;
 
 var
@@ -101,6 +111,7 @@ begin
       end;
     SetLength(CanvasFigures, j);
   end;
+  AddStateToHistory(GetAppState);
   PaintBox.Invalidate;
 end;
 
@@ -116,7 +127,23 @@ begin
         CanvasFigures[i-1] := temp;
       end
   end;
+  AddStateToHistory(GetAppState);
   PaintBox.Invalidate;
+end;
+
+procedure TMainForm.MEditCopyClick(Sender: TObject);
+begin
+  CopySelected(PaintBox);
+end;
+
+procedure TMainForm.MEditPasteClick(Sender: TObject);
+begin
+  PasteSelected(PaintBox);
+end;
+
+procedure TMainForm.MEditRedoClick(Sender: TObject);
+begin
+  Redo(PaintBox);
 end;
 
 procedure TMainForm.MEditUpClick(Sender: TObject);
@@ -131,49 +158,53 @@ begin
         CanvasFigures[i+1] := temp;
       end
   end;
+  AddStateToHistory(GetAppState);
   PaintBox.Invalidate;
 end;
 
-procedure TMainForm.MFileCloseClick(Sender: TObject);
-var i: TFigureBase;
+procedure TMainForm.MEditUndoClick(Sender: TObject);
 begin
-  for i in CanvasFigures do
-    i.Destroy;
-  SetLength(CanvasFigures, 0);
-  for i in AnchorsFigures do
-    i.Destroy;
-  SetLength(AnchorsFigures, 0);
+  Undo(PaintBox);
+end;
+
+procedure TMainForm.MFileCloseClick(Sender: TObject);
+begin
+  ClearAppState;
+  ClearHistory;
   openedFile:='';
   PaintBox.Invalidate;
 end;
 
 procedure TMainForm.MFileOpenClick(Sender: TObject);
 var
-  fStream : TFileStream;
-  JData: TJSONData;
+  f: text;
+  state, s: String;
 begin
-  OpenDialog.Filter := 'JSON files|*.json';
+  if openedFile <> '' then MFileClose.Click;;
+  OpenDialog.Filter := 'GraphicEditor files|*.ge';
   if (OpenDialog.Execute) then begin
     try
       openedFile := OpenDialog.FileName;
-      fStream := TFileStream.Create(openedFile, fmOpenRead);
-      with TJSONParser.Create(fStream) do
-        try JData := Parse;
-        finally Free; end;
-      fStream.Free;
-      MFileClose.Click;
-      LoadPicture(JData);
+      System.Assign(f, openedFile);
+      System.Reset(f);
+      while not EOF(f) do begin
+        ReadLn(f, s);
+        state := state + s;
+      end;
+      LoadAppState(state);
+      System.Close(f);
     except
       ShowMessage('Error while opening file');
       MFileClose.Click;
     end;
   end;
+  PaintBox.Invalidate;
 end;
 
 procedure TMainForm.MFileSaveAsClick(Sender: TObject);
 begin
-  SaveDialog.DefaultExt := 'json';
-  SaveDialog.Filter := 'JSON files|*.json';
+  SaveDialog.DefaultExt := 'ge';
+  SaveDialog.Filter := 'GraphicEditor files|*.ge';
   SaveDialog.Execute;
   openedFile := SaveDialog.FileName;
   SavePicture;
@@ -364,54 +395,15 @@ end;
 procedure TMainForm.SavePicture;
 var
   f: Text;
-  i: TFigureBase;
-  data, obj: TJSONObject;
-  figures: TJSONArray;
+  state: String;
 begin
   if (openedFile <> '') then begin
-    data := TJSONObject.Create;
     System.Assign(f, openedFile);
     System.Rewrite(f);
-    figures := TJSONArray.Create;
-    for i in CanvasFigures do begin
-      obj := i.Save;
-      figures.Add(obj);
-    end;
-    data.Add(JSON_FIGURES, figures);
-    WriteLn(f, data.FormatJSON);
+    state := StatesHistory[currentState];
+    WriteLn(f, state);
     System.Close(f);
-    data.Free;
   end;
-end;
-
-procedure TMainForm.LoadPicture(JData: TJSONData);
-var
-  i, j: integer;
-  fClass: TFigureClass;
-  JFigures: TJSONData;
-  JPoints: TJSONArray;
-begin
-  try
-    JFigures := JData.GetPath(JSON_FIGURES);
-    for i := 0 to JFigures.Count - 1 do
-      with TJSONObject(JFigures.Items[i]) do begin
-        fClass := GetFigureClassByName(Get(JSON_CLASS_NAME));
-        SetLength(CanvasFigures, Length(CanvasFigures) + 1);
-        CanvasFigures[High(CanvasFigures)] := fClass.Create(DPoint(0, 0));
-        with CanvasFigures[High(CanvasFigures)] do begin
-          Load(TJSONObject(JFigures.Items[i]));
-          SetLength(Points, 0);
-          JPoints := TJSONArray(GetPath(JSON_POINTS));
-          for j := 0 to JPoints.Count - 1 do
-            with TJSONObject(JPoints.Items[j]) do begin
-              SetLength(Points, Length(Points) + 1);
-              Points[High(Points)] := DPoint(Get('x'), Get('y'));
-            end;
-        end;
-      end;
-  finally JData.Free;
-  end;
-  PaintBox.Invalidate;
 end;
 
 end.

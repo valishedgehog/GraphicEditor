@@ -5,7 +5,8 @@ unit figures;
 interface
 
 uses
-  Classes, SysUtils, Graphics, LCLIntf, LCLType, transform, constants, fpjson;
+  Classes, SysUtils, Graphics, LCLIntf, LCLType, fpjson,
+  transform, constants;
 
 type
 
